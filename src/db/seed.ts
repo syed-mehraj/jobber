@@ -5,6 +5,7 @@ import { unofficialCatalog } from '@/jobs/catalog-unofficial'
 import { defaultProfile } from '@/jobs/score'
 import { masterResume } from '@/resume/master'
 import { allSkills } from '@/resume/types'
+import { defaultAbout } from '@/resume/about'
 import * as schema from './schema'
 
 /**
@@ -23,6 +24,10 @@ export async function syncCatalog(db: NodePgDatabase<typeof schema>): Promise<vo
       })
   }
   await db.insert(schema.settings).values({ key: 'profile', value: defaultProfile }).onConflictDoNothing()
+  await db
+    .insert(schema.settings)
+    .values({ key: 'about', value: { text: defaultAbout } })
+    .onConflictDoNothing()
 
   const [{ n }] = await db.select({ n: count() }).from(schema.resumes)
   if (n === 0) {

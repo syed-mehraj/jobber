@@ -8,9 +8,11 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { ResumeIcon } from '@/components/ui/icons'
 import { PageHeader } from '@/components/ui/page-header'
 import { Skeleton } from '@/components/ui/skeleton'
+import { AboutCard } from '@/components/resume/about-card'
 import { timeAgo } from '@/lib/format'
-import { getResumes, type ResumeRecord } from '@/lib/resumes'
+import { getAbout, getResumes, type ResumeRecord } from '@/lib/resumes'
 import { countBullets, countSections } from '@/resume/types'
+import { saveAbout } from './actions'
 
 export const metadata: Metadata = { title: 'Resumes' }
 
@@ -18,9 +20,18 @@ export default function Page() {
   return (
     <>
       <PageHeader title="Resumes" text="Your master resume and the versions made from it." />
-      <Suspense fallback={<GridSkeleton />}>
-        <Resumes />
-      </Suspense>
+      <div className="grid items-start gap-5 lg:grid-cols-12">
+        <div className="lg:col-span-8">
+          <Suspense fallback={<GridSkeleton />}>
+            <Resumes />
+          </Suspense>
+        </div>
+        <aside className="lg:sticky lg:top-[88px] lg:col-span-4">
+          <Suspense fallback={<Skeleton className="h-80 rounded-card" />}>
+            <About />
+          </Suspense>
+        </aside>
+      </div>
     </>
   )
 }
@@ -42,13 +53,24 @@ async function Resumes() {
     )
   }
   return (
-    <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <ul className="grid gap-4 sm:grid-cols-2">
       {resumes.map((r) => (
         <li key={r.id}>
           <ResumeCard resume={r} />
         </li>
       ))}
     </ul>
+  )
+}
+
+async function About() {
+  const about = await getAbout()
+  return (
+    <AboutCard
+      text={about.text}
+      updated={about.updatedAt ? `saved ${timeAgo(about.updatedAt)}` : null}
+      save={saveAbout}
+    />
   )
 }
 
@@ -72,8 +94,8 @@ function ResumeCard({ resume }: { resume: ResumeRecord }) {
 
 function GridSkeleton() {
   return (
-    <div aria-hidden="true" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {[0, 1, 2].map((i) => (
+    <div aria-hidden="true" className="grid gap-4 sm:grid-cols-2">
+      {[0, 1].map((i) => (
         <Card key={i} className="p-5">
           <Skeleton className="h-5 w-2/3" />
           <Skeleton className="mt-3 h-4 w-1/3" />

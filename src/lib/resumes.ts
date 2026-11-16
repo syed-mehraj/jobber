@@ -2,8 +2,9 @@ import 'server-only'
 import { asc, desc, eq } from 'drizzle-orm'
 import { connection } from 'next/server'
 import { getDb } from '@/db'
-import { resumes } from '@/db/schema'
+import { resumes, settings } from '@/db/schema'
 import { requireSession } from '@/lib/auth/session'
+import type { About } from '@/resume/about'
 import { toContent, type ResumeContent } from '@/resume/types'
 
 export type ResumeRecord = {
@@ -46,4 +47,12 @@ export async function getResume(id: number): Promise<ResumeRecord | null> {
   if (!Number.isSafeInteger(id) || id < 1 || id > 2147483647) return null
   const [row] = await d.select().from(resumes).where(eq(resumes.id, id)).limit(1)
   return row ? toRecord(row) : null
+}
+
+/** The owner's own description of their work (the "About you" panel). */
+export async function getAbout(): Promise<{ text: string; updatedAt: Date | null }> {
+  const d = await db()
+  const [row] = await d.select().from(settings).where(eq(settings.key, 'about')).limit(1)
+  const text = (row?.value as About | undefined)?.text
+  return { text: typeof text === 'string' ? text : '', updatedAt: row?.updatedAt ?? null }
 }

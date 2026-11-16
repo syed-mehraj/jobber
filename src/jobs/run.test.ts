@@ -177,3 +177,20 @@ describe('duplicates', () => {
     expect(summary?.kept).toBe(1)
   })
 })
+
+describe('loadProfile with About you', () => {
+  it('counts skills from the description but not the ones it says you have not used', async () => {
+    const { loadProfile } = await import('./run')
+    const { settings } = await import('@/db/schema')
+    const db = await createTestDb()
+    await db.insert(settings).values({
+      key: 'about',
+      value: {
+        text: 'I work with Python and Git and debug distributed systems. While I haven’t directly administered Salesforce or SAP, I learn fast.',
+      },
+    })
+    const profile = await loadProfile(db)
+    expect(profile.skills).toEqual(expect.arrayContaining(['python', 'git']))
+    expect(profile.skills).not.toContain('salesforce')
+  })
+})

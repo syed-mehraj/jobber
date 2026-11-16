@@ -38,7 +38,7 @@ export function resumeText(content: unknown): string {
 
 /**
  * The skills a posting is compared against: the stored profile list plus every known skill that appears
- * anywhere in the master resume, so work described in a bullet counts as much as the Skills section.
+ * anywhere in the master resume or in "About you", so work described in prose counts as much as the Skills section.
  */
 export async function loadProfile(db: DB): Promise<Profile> {
   const [row] = await db.select().from(settings).where(eq(settings.key, 'profile'))
@@ -48,9 +48,14 @@ export async function loadProfile(db: DB): Promise<Profile> {
     .from(resumes)
     .where(eq(resumes.isMaster, true))
     .limit(1)
-  if (!master) return profile
+  const [about] = await db.select({ value: settings.value }).from(settings).where(eq(settings.key, 'about')).limit(1)
+  const aboutText = (about?.value as { text?: string } | undefined)?.text ?? ''
+  if (!master && !aboutText) return profile
   const skills = new Set(profile.skills.map(canonicalSkill))
-  for (const s of extractSkills(resumeText(master.content))) skills.add(s)
+  // Skills named in "About you" count too, except ones it explicitly says you haven't used.
+  const notUsed = /haven.t (directly )?(used|administered|worked with)[^.]*/i.exec(aboutText)?.[0] ?? ''
+  const aboutSkills = extractSkills(aboutText).filter((s) => !extractSkills(notUsed).includes(s))
+  for (const s of [...extractSkills(resumeText(master?.content)), ...aboutSkills]) skills.add(s)
   return { ...profile, skills: [...skills] }
 }
 

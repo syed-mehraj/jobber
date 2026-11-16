@@ -111,8 +111,12 @@ describe('seeding', () => {
     expect(rows[0]).toMatchObject({ name: 'Master resume', isMaster: true })
     expect(toContent(rows[0].content)).toEqual(masterResume)
 
-    const [profile] = await db.select().from(settings)
+    const { eq } = await import('drizzle-orm')
+    const [profile] = await db.select().from(settings).where(eq(settings.key, 'profile'))
     expect(profile.value).toEqual({ skills: allSkills(masterResume), preferred: defaultProfile.preferred })
+
+    const [about] = await db.select().from(settings).where(eq(settings.key, 'about'))
+    expect((about.value as { text: string }).text).toContain('AI Engineer at Parcera')
 
     await syncCatalog(db) // a second run changes nothing
     expect(await db.select().from(resumes)).toHaveLength(1)
