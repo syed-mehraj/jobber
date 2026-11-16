@@ -36,6 +36,18 @@ export async function removeApplication(id: number): Promise<void> {
   refresh()
 }
 
+/** Hide a role from the lists (it stays hidden when the search sees it again). `restore` undoes it. */
+export async function setDismissed(jobId: number, dismissed: boolean): Promise<void> {
+  await requireSession()
+  if (!Number.isInteger(jobId)) return
+  const db = await getDb()
+  await db
+    .update(jobs)
+    .set({ dismissedAt: dismissed ? new Date() : null })
+    .where(eq(jobs.id, jobId))
+  refresh()
+}
+
 export type RunNowResult = { ok: boolean; message: string }
 
 /** "Run search now": waits for the run, then refreshes the page. */

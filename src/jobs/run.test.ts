@@ -127,3 +127,21 @@ describe('runSearch', () => {
     expect(await runSearch(db, 'manual', { adapters: fake, now })).toBeNull()
   })
 })
+
+describe('loadProfile', () => {
+  it('adds every known skill found anywhere in the master resume', async () => {
+    const { loadProfile, resumeText } = await import('./run')
+    const db = await createTestDb()
+    await db.insert((await import('@/db/schema')).resumes).values({
+      name: 'Master resume',
+      isMaster: true,
+      content: {
+        summary: { text: 'AI student building RAG pipelines with LangChain.' },
+        projects: [{ stack: 'TODO', bullets: [{ text: 'Deployed on Kubernetes with Docker.' }] }],
+      },
+    })
+    const profile = await loadProfile(db)
+    for (const s of ['artificial intelligence', 'rag', 'kubernetes', 'docker']) expect(profile.skills).toContain(s)
+    expect(resumeText({ a: 'TODO', b: ['x', { c: 'y' }] })).toBe('x\ny')
+  })
+})

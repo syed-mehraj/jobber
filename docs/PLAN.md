@@ -75,7 +75,7 @@ The UI is specified in [DESIGN.md](DESIGN.md): blue and white on a dim backgroun
 
 **2.2 Login (done):** the password page, a signed session cookie, and `src/proxy.ts` protecting every route except `/login` and the cron endpoint (which needs `CRON_SECRET`). Every data read and action checks the session too.
 
-**2.3 Seed (next):** the master resume, built only from real work:
+**2.3 Seed (done; fill in the TODOs):** the master resume, built only from real work:
 - Parallel Labs / Parcera: the voice ordering agent
 - Steady: the NestJS microservices and the Expo / Kotlin app
 - the portfolio
@@ -88,7 +88,7 @@ Unverified numbers or dates are marked `TODO` for Syed to fill in.
 
 ## Phase 3: Resume editor (the core)
 
-**3.1 Resume schema:** typed sections (contact, summary, experience, projects, education, skills, certifications, custom). Every item and bullet has a stable ID.
+**3.1 Resume schema (done):** typed sections (contact, summary, experience, projects, education, skills, certifications, custom). Every item and bullet has a stable ID.
 
 **3.2 Editor state:** one store (Zustand) with undo and redo. Both panes read from it and write to it. Every field has a path, such as `experience[id].bullets[id]`.
 
@@ -116,7 +116,7 @@ Unverified numbers or dates are marked `TODO` for Syed to fill in.
 
 **5.1 Resume checks without AI:** bullets with no numbers, weak verbs, length, missing sections, and date consistency. These feed the 0–100 score with a breakdown.
 
-**5.2 Job targeting:** paste a job description or pick one from Jobs.
+**5.2 Job targeting (keyword version done: the fit panel lists the skills a posting names, which ones your master resume covers, and which are missing):** paste a job description or pick one from Jobs.
 - Gemini extracts the required and preferred skills.
 - The app shows matched and missing keywords, with Add / Skip.
 

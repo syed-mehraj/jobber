@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { ApplyButton } from '@/components/dashboard/apply-button'
+import { DismissButton } from '@/components/jobs/dismiss-button'
 import { Badge } from '@/components/ui/badge'
 import { iconButtonClass } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -81,21 +82,36 @@ export function JobInspector({ job, closeHref }: { job: JobDetail; closeHref?: s
         </Section>
 
         <Section title="Skills">
-          {job.matched.length ? (
+          {job.required.length ? (
             <>
-              <p className="text-small text-ink-2">From your work, this posting mentions:</p>
-              <ul className="mt-2 flex flex-wrap gap-1.5">
+              <p className="text-small text-ink-2">
+                The posting names {job.required.length} skill{job.required.length === 1 ? '' : 's'}; your work covers{' '}
+                {job.matched.length}.
+              </p>
+              <ul className="mt-2 flex flex-wrap gap-1.5" aria-label="Skills you have">
                 {job.matched.map((s) => (
                   <li key={s}>
                     <Badge tone="success">+ {s}</Badge>
                   </li>
                 ))}
               </ul>
+              {job.missing.length > 0 && (
+                <>
+                  <p className="mt-3 text-small text-ink-2">Not on your resume yet:</p>
+                  <ul className="mt-2 flex flex-wrap gap-1.5" aria-label="Skills you are missing">
+                    {job.missing.map((s) => (
+                      <li key={s}>
+                        <Badge tone="warning">- {s}</Badge>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
             </>
           ) : (
             <p className="text-small text-ink-2">
               {job.summary
-                ? 'The posting does not name any skills from your work. Read it before applying.'
+                ? 'The posting does not name specific skills. Read it before applying.'
                 : 'This source gives no description, so skills could not be checked.'}
             </p>
           )}
@@ -116,6 +132,11 @@ export function JobInspector({ job, closeHref }: { job: JobDetail; closeHref?: s
             )}
           </p>
           {job.closed && <p className="mt-1 text-small font-medium text-danger">This posting has been taken down.</p>}
+          {job.dismissed && (
+            <p className="mt-1 text-small font-medium text-ink-2">
+              You hid this role. Restore it to see it in the lists.
+            </p>
+          )}
         </Section>
 
         {job.summary && (
@@ -144,6 +165,7 @@ export function JobInspector({ job, closeHref }: { job: JobDetail; closeHref?: s
           applied={job.applied}
           prominent={companyBoard ? `Apply on ${source}` : 'Open the posting'}
         />
+        <DismissButton jobId={job.id} dismissed={job.dismissed} />
       </div>
     </Card>
   )

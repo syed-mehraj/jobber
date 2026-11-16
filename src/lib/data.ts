@@ -38,7 +38,8 @@ function startOfTodayIst(now = new Date()): Date {
   return new Date(ist.getTime() - 5.5 * 3600000)
 }
 
-const open = isNull(jobs.closedAt)
+/** Still posted and not dismissed. */
+const open = and(isNull(jobs.closedAt), isNull(jobs.dismissedAt))!
 const notApplied = sql`not exists (select 1 from ${applications} where ${applications.jobId} = ${jobs.id})`
 
 export type Counts = {
@@ -98,6 +99,9 @@ export type JobRow = {
   reasons: string[]
   flags: string[]
   matched: string[]
+  /** Skills the posting asks for that the profile doesn't list. */
+  missing: string[]
+  required: string[]
   source: string
   /** greenhouse, lever, ashby, smartrecruiters, simplify, hackernews */
   sourceKind: string
@@ -121,6 +125,8 @@ const jobColumns = {
   reasons: jobs.reasons,
   flags: jobs.flags,
   matched: jobs.matched,
+  missing: jobs.missing,
+  required: jobs.required,
   source: sources.name,
   sourceKind: sources.kind,
   applied: sql<boolean>`exists (select 1 from ${applications} where ${applications.jobId} = ${jobs.id})`,
@@ -250,14 +256,19 @@ export async function getApplications(): Promise<ApplicationRow[]> {
     .orderBy(desc(applications.appliedAt))
 }
 
-export type JobDetail = JobRow & { summary: string | null; closed: boolean }
+export type JobDetail = JobRow & { summary: string | null; closed: boolean; dismissed: boolean }
 
 /** One job with its description, for the Jobs side panel. */
 export async function getJob(id: number): Promise<JobDetail | null> {
   if (!Number.isInteger(id)) return null
   const d = await db()
   const [row] = await d
-    .select({ ...jobColumns, summary: jobs.summary, closed: sql<boolean>`${jobs.closedAt} is not null` })
+    .select({
+      ...jobColumns,
+      summary: jobs.summary,
+      closed: sql<boolean>`${jobs.closedAt} is not null`,
+      dismissed: sql<boolean>`${jobs.dismissedAt} is not null`,
+    })
     .from(jobs)
     .innerJoin(sources, eq(sources.id, jobs.sourceId))
     .where(eq(jobs.id, id))

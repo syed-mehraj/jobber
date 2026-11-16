@@ -1,9 +1,10 @@
 import { and, desc, eq, gt, inArray, isNull, lt, sql } from 'drizzle-orm'
 import type { DB } from '@/db'
-import { jobs, runs, settings, sources } from '@/db/schema'
+import { jobs, resumes, runs, settings, sources } from '@/db/schema'
 import { adapters } from './adapters'
 import { classify } from './filters'
 import { defaultProfile, scoreJob, type Profile } from './score'
+import { canonicalSkill, extractSkills } from './skills'
 import type { Adapter } from './types'
 
 export type RunSummary = {
@@ -20,9 +21,35 @@ const CONCURRENCY = 8
 /** A run that hasn't finished after this long is treated as dead, so a crash can't block searches forever. */
 const STALE_LOCK_MS = 10 * 60 * 1000
 
-async function loadProfile(db: DB): Promise<Profile> {
+/** Every string inside a resume's JSON content, joined: summary, bullets, skills, project stacks… */
+export function resumeText(content: unknown): string {
+  const out: string[] = []
+  const walk = (v: unknown) => {
+    if (typeof v === 'string') {
+      if (v !== 'TODO' && !v.startsWith('TODO')) out.push(v)
+    } else if (Array.isArray(v)) v.forEach(walk)
+    else if (v && typeof v === 'object') Object.values(v).forEach(walk)
+  }
+  walk(content)
+  return out.join('\n')
+}
+
+/**
+ * The skills a posting is compared against: the stored profile list plus every known skill that appears
+ * anywhere in the master resume, so work described in a bullet counts as much as the Skills section.
+ */
+export async function loadProfile(db: DB): Promise<Profile> {
   const [row] = await db.select().from(settings).where(eq(settings.key, 'profile'))
-  return (row?.value as Profile | undefined) ?? defaultProfile
+  const profile = (row?.value as Profile | undefined) ?? defaultProfile
+  const [master] = await db
+    .select({ content: resumes.content })
+    .from(resumes)
+    .where(eq(resumes.isMaster, true))
+    .limit(1)
+  if (!master) return profile
+  const skills = new Set(profile.skills.map(canonicalSkill))
+  for (const s of extractSkills(resumeText(master.content))) skills.add(s)
+  return { ...profile, skills: [...skills] }
 }
 
 /** Runs every enabled source once. Returns null if another run is already going. */
@@ -66,7 +93,11 @@ export async function runSearch(
           externalId: p.externalId,
           company: p.company,
           title: p.title,
-          location: p.location.slice(0, 300),
+          location: p.location
+            .replace(/,(\s*,)+/g, ',')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .slice(0, 300),
           region: c.region,
           level: c.level,
           category: c.category,
