@@ -174,7 +174,7 @@ Settings has a "Send test message" button.
 
 **9.1 Tracker:** a kanban (Saved → Applied → OA → Interview → Offer / Rejected), notes, dates, and the resume version used.
 
-**9.2 Dashboard:** stat cards; jobs by category and by best resume version; today's top matches; follow-ups due.
+**9.2 Dashboard:** built to [DASHBOARD.md](DASHBOARD.md): a greeting, a stat strip, a new-matches chart, an average-match gauge, top matches and next steps.
 
 **9.3 Polish:**
 - empty states and loading skeletons

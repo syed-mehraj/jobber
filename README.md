@@ -6,7 +6,7 @@ A private workspace for tailoring resumes and finding product-company roles wort
 - **Jobs:** a daily search of companies' own career sites, filtered to realistic roles and scored against each resume.
 - **Applications:** a tracker from saved to offer.
 
-Status: planning. See [docs/PLAN.md](docs/PLAN.md) for the step-by-step plan and [docs/DESIGN.md](docs/DESIGN.md) for the design system; open `docs/design/preview.html` in a browser to see it.
+Status: planning. See [docs/PLAN.md](docs/PLAN.md) for the step-by-step plan and [docs/DESIGN.md](docs/DESIGN.md) for the design system; open `docs/design/preview.html` (components) and `docs/design/dashboard.html` (dashboard) in a browser to see it.
 
 ## Setup (once code lands)
 

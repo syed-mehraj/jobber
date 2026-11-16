@@ -8,7 +8,8 @@ Blue and white on a dim, cool-grey background. Calm, dense enough for real work,
 
 | Token | Value | Use |
 |---|---|---|
-| `bg` | `#EEF1F6` | the dim app canvas behind everything |
+| `canvas` | `#E4E8EF` | the dim page behind the app frame |
+| `bg` | `#EEF1F6` | the app frame (dashboard frame uses `#F3F5F9`) |
 | `bg-sunken` | `#E5E9F0` | wells, the editor gutter, empty states |
 | `surface` | `#FFFFFF` | cards, panels, inputs, the resume page |
 | `surface-muted` | `#F7F9FC` | table headers, hovered rows, secondary panels |
@@ -98,20 +99,7 @@ Controls: font size (9–11pt), line height, section spacing, margins, accent (b
 A centred white card on the dim canvas: logo, password field, primary "Sign in" (lg).
 
 ### Dashboard
-```
-┌ Sidebar ┐┌──────────────────────── Top bar ────────────────────────────┐
-│         ││ Dashboard                          Last run 07:00 · ⌘K       │
-│         │├──────────────────────────────────────────────────────────────┤
-│         ││ [New matches 24] [Applied 9] [Interviews 2] [Avg match 71]   │
-│         ││ ┌ Jobs by category ───────────┐┌ Best version per category ┐ │
-│         ││ │ SDE intern        ▇▇▇▇▇ 12  ││ ML/AI intern → ML resume  │ │
-│         ││ │ ML/AI intern      ▇▇▇ 7     ││ SDE intern → Backend      │ │
-│         ││ │ New-grad SDE      ▇▇ 4      │└───────────────────────────┘ │
-│         ││ │ Data              ▇ 1       │┌ Today's top matches ──────┐ │
-│         ││ └─────────────────────────────┘│ 92 Google · SWE Intern  → │ │
-│         ││                                │ 88 Atlassian · Grad SDE → │ │
-└─────────┘└────────────────────────────────┴───────────────────────────┘─┘
-```
+Simple by design: a greeting, one stat strip, a new-matches bar chart beside an average-match gauge, then top matches beside next steps. The app sits as a rounded frame (#F3F5F9) on a dimmer canvas (#E4E8EF). Full spec in [DASHBOARD.md](DASHBOARD.md); preview in `design/dashboard.html`.
 
 ### Resumes
 A grid of resume cards (page thumbnail, name, version tag, last edited, best score), plus "New resume" (primary) and "Upload PDF" (secondary).
