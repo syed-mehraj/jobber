@@ -119,3 +119,10 @@ export const CompassIcon = (p: IconProps) => (
     <path d="M12.8 7.2l-1.6 4-4 1.6 1.6-4z" />
   </svg>
 )
+
+export const PersonIcon = (p: IconProps) => (
+  <svg {...large(p)}>
+    <circle cx="10" cy="7" r="3.2" />
+    <path d="M3.8 17c.8-3.2 3.3-5 6.2-5s5.4 1.8 6.2 5" />
+  </svg>
+)

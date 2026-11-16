@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import type { AboutInput, AboutResult } from '@/app/(app)/resumes/actions'
+import type { AboutInput, AboutResult } from '@/app/(app)/about/actions'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -30,9 +30,9 @@ export function AboutSection({ items, actions }: { items: AboutItem[]; actions: 
       <div className="flex items-center justify-between gap-3 border-b border-line px-5 py-4">
         <div>
           <h2 id="about-title" className="text-title font-semibold">
-            About you
+            {items.length} description{items.length === 1 ? '' : 's'}
           </h2>
-          <p className="text-caption text-ink-3">Your work in your own words, one per kind of application</p>
+          <p className="text-caption text-ink-3">Most recently edited first</p>
         </div>
         {editing !== 'new' && (
           <Button size="sm" onClick={() => setEditing('new')}>
@@ -146,7 +146,7 @@ function AboutEntry({
 
       {open && (
         <div id={panelId} className="px-5 pb-4">
-          <div className="grid max-h-[420px] gap-3 overflow-y-auto text-small leading-relaxed text-ink-2">
+          <div className="grid gap-3 text-small leading-relaxed text-ink-2">
             {item.text.split(/\n{2,}/).map((para, i) => (
               <p key={i} className="whitespace-pre-line">
                 {para}

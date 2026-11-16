@@ -43,7 +43,7 @@ describe('header and menu slider', () => {
     renderHeader()
     const main = screen.getByRole('navigation', { name: 'Main' })
     const links = Array.from(main.querySelectorAll('a')).map((a) => a.textContent)
-    expect(links).toEqual(['Dashboard', 'Resumes', 'Jobs'])
+    expect(links).toEqual(['Dashboard', 'Resumes', 'About you', 'Jobs'])
     expect(main.querySelector('[aria-current="page"]')?.textContent).toBe('Jobs')
     expect(screen.getByRole('link', { name: 'New resume' })).toHaveAttribute('href', '/resumes/new')
   })

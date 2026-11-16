@@ -8,11 +8,9 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { ResumeIcon } from '@/components/ui/icons'
 import { PageHeader } from '@/components/ui/page-header'
 import { Skeleton } from '@/components/ui/skeleton'
-import { AboutSection } from '@/components/resume/about-section'
 import { timeAgo } from '@/lib/format'
-import { getAbouts, getResumes, type ResumeRecord } from '@/lib/resumes'
+import { getResumes, type ResumeRecord } from '@/lib/resumes'
 import { countBullets, countSections } from '@/resume/types'
-import { createAbout, deleteAbout, duplicateAbout, updateAbout } from './actions'
 
 export const metadata: Metadata = { title: 'Resumes' }
 
@@ -20,18 +18,9 @@ export default function Page() {
   return (
     <>
       <PageHeader title="Resumes" text="Your master resume and the versions made from it." />
-      <div className="grid items-start gap-5 lg:grid-cols-12">
-        <div className="lg:col-span-8">
-          <Suspense fallback={<GridSkeleton />}>
-            <Resumes />
-          </Suspense>
-        </div>
-        <aside className="lg:sticky lg:top-[88px] lg:col-span-4">
-          <Suspense fallback={<Skeleton className="h-80 rounded-card" />}>
-            <About />
-          </Suspense>
-        </aside>
-      </div>
+      <Suspense fallback={<GridSkeleton />}>
+        <Resumes />
+      </Suspense>
     </>
   )
 }
@@ -53,31 +42,13 @@ async function Resumes() {
     )
   }
   return (
-    <ul className="grid gap-4 sm:grid-cols-2">
+    <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {resumes.map((r) => (
         <li key={r.id}>
           <ResumeCard resume={r} />
         </li>
       ))}
     </ul>
-  )
-}
-
-const aboutActions = { create: createAbout, update: updateAbout, duplicate: duplicateAbout, remove: deleteAbout }
-
-async function About() {
-  const items = await getAbouts()
-  return (
-    <AboutSection
-      items={items.map((a) => ({
-        id: a.id,
-        title: a.title,
-        target: a.target,
-        text: a.text,
-        updated: `saved ${timeAgo(a.updatedAt)}`,
-      }))}
-      actions={aboutActions}
-    />
   )
 }
 
@@ -101,8 +72,8 @@ function ResumeCard({ resume }: { resume: ResumeRecord }) {
 
 function GridSkeleton() {
   return (
-    <div aria-hidden="true" className="grid gap-4 sm:grid-cols-2">
-      {[0, 1].map((i) => (
+    <div aria-hidden="true" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {[0, 1, 2].map((i) => (
         <Card key={i} className="p-5">
           <Skeleton className="h-5 w-2/3" />
           <Skeleton className="mt-3 h-4 w-1/3" />

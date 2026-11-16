@@ -8,7 +8,7 @@ Preview: open [`design/dashboard.html`](design/dashboard.html) in a browser (sam
 
 ```
 ┌ Header ──────────────────────────────────────────────────────────────┐
-│ [J] Jobber   Dashboard  Resumes  Jobs              [+ New resume] [☰]│
+│ [J] Jobber   Dashboard  Resumes  About you  Jobs   [+ New resume] [☰]│
 └──────────────────────────────────────────────────────────────────────┘
   Good morning, Syed
   6 new jobs match your resumes today.
@@ -30,7 +30,7 @@ Content is centred, at most 1040px wide, on the dim `bg` (#EEF1F6) with white ca
 ## Header: only what's needed
 
 - **Logo:** Jobber, links to the dashboard.
-- **Three links:** Dashboard, Resumes, Jobs. The current page is blue with a blue underline.
+- **Four links:** Dashboard, Resumes, About you, Jobs. The current page is blue with a blue underline.
 - **New resume:** the page's one primary button.
 - **☰ Menu:** opens the menu slider.
 - **Phones (below 720px):** the three links move into the menu, and New resume shrinks to a "+" icon.
@@ -41,7 +41,7 @@ Slides in from the right (340px; 88% of the width on phones) over a dimmed page.
 
 | Group | Items |
 |---|---|
-| Go to | Dashboard, Resumes (count), Jobs (count), Applications (count) |
+| Go to | Dashboard, Resumes (count), About you, Jobs (count), Applications (count), Programs |
 | Daily search | "Running every day at 07:00", last run time, sources working, **Run search now** |
 | Settings | Companies and sources, Roles and locations, Telegram alerts |
 | Footer | Initials, first name, **Sign out** |

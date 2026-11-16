@@ -69,7 +69,7 @@ Contrast: `text` on `surface` 17:1, `text-2` 7.4:1, `text-3` 3.4:1 (hints only, 
 
 ## 5. Components
 
-- **Header** (64px, white, bottom hairline): logo; three links (Dashboard, Resumes, Jobs) with a blue text and underline for the current page; **New resume** (primary); a ☰ button. Below 720px the links move into the menu and New resume becomes a "+" icon.
+- **Header** (64px, white, bottom hairline): logo; four links (Dashboard, Resumes, About you, Jobs) with a blue text and underline for the current page; **New resume** (primary); a ☰ button. Below 720px the links move into the menu and New resume becomes a "+" icon.
 - **Menu slider** (340px from the right, over a dimmed page): Go to (all pages with counts, including Applications), Daily search (status and Run search now), Settings (companies and sources, roles and locations, Telegram alerts), and a footer with initials and Sign out. Closes with ×, a click outside or Esc.
 - **Cards:** white, 12px radius, 1px `border`, no shadow, 16–20px padding; the title row holds a title, a meta line and actions on the right.
 - **Inputs:** 36px tall, white, `border-strong`, 8px radius; the focus border turns `primary` with the ring. The label sits above at 13/500; the hint below in `text-3`; errors in `danger` with an icon.
@@ -102,6 +102,9 @@ A centred white card on the dim canvas: logo, password field, primary "Sign in" 
 ### Dashboard
 Minimal. Stat cards carry their own context so numbers never contradict each other: "Open matches 18, +6 new today", "Applied 3, 2 waiting to hear back", "Tests and interviews 1". The lead line says when the sources were last checked.
  a greeting and one line, three numbers (new matches, applied, interviews), and today's five best matches with Apply. Full spec in [DASHBOARD.md](DASHBOARD.md); preview in `design/dashboard.html`.
+
+### About you
+A page in the header between Resumes and Jobs: several descriptions of your work in your own words (title, optional "for" company or role, text), one per kind of application. Open one to Copy, Edit, Duplicate or Delete; + New adds another. Matching reads them too.
 
 ### Resumes
 A grid of resume cards (page thumbnail, name, version tag, last edited, best score), plus "New resume" (primary) and "Upload PDF" (secondary).

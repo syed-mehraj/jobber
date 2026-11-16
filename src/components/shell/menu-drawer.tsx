@@ -12,6 +12,7 @@ import {
   DashboardIcon,
   JobsIcon,
   LocationIcon,
+  PersonIcon,
   ResumeIcon,
   SwatchIcon,
 } from '@/components/ui/icons'
@@ -134,6 +135,7 @@ export function MenuDrawer({ id, open, onClose, onNavigate, pathname, user, data
           <Group>Go to</Group>
           {item('/', 'Dashboard', <DashboardIcon />)}
           {item('/resumes', 'Resumes', <ResumeIcon />, data.counts?.resumes)}
+          {item('/about', 'About you', <PersonIcon />)}
           {item('/jobs', 'Jobs', <JobsIcon />, data.counts?.newMatches)}
           {item('/applications', 'Applications', <ApplicationsIcon />, data.counts?.applied)}
           {item('/programs', 'Programs and other sites', <CompassIcon />)}
