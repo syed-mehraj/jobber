@@ -46,12 +46,15 @@ export type Counts = {
   newMatches: number
   newToday: number
   applied: number
+  /** Applied and not heard back yet. */
+  waiting: number
   interviews: number
+  offers: number
 }
 
 export async function getCounts(): Promise<Counts> {
   const d = await db()
-  const [[r], [m], [t], [a], [i]] = await Promise.all([
+  const [[r], [m], [t], [a], [i], [w], [o]] = await Promise.all([
     d.select({ n: count() }).from(resumes),
     d.select({ n: count() }).from(jobs).where(and(open, notApplied)),
     d
@@ -66,8 +69,18 @@ export async function getCounts(): Promise<Counts> {
       .select({ n: count() })
       .from(applications)
       .where(inArray(applications.status, ['oa', 'interview'])),
+    d.select({ n: count() }).from(applications).where(eq(applications.status, 'applied')),
+    d.select({ n: count() }).from(applications).where(eq(applications.status, 'offer')),
   ])
-  return { resumes: r.n, newMatches: m.n, newToday: t.n, applied: a.n, interviews: i.n }
+  return {
+    resumes: r.n,
+    newMatches: m.n,
+    newToday: t.n,
+    applied: a.n,
+    waiting: w.n,
+    interviews: i.n,
+    offers: o.n,
+  }
 }
 
 export type JobRow = {
@@ -86,6 +99,8 @@ export type JobRow = {
   flags: string[]
   matched: string[]
   source: string
+  /** greenhouse, lever, ashby, smartrecruiters, simplify, hackernews */
+  sourceKind: string
   applied: boolean
   /** First seen in the last 24 hours. */
   isNew: boolean
@@ -107,6 +122,7 @@ const jobColumns = {
   flags: jobs.flags,
   matched: jobs.matched,
   source: sources.name,
+  sourceKind: sources.kind,
   applied: sql<boolean>`exists (select 1 from ${applications} where ${applications.jobId} = ${jobs.id})`,
   isNew: sql<boolean>`${jobs.firstSeenAt} > now() - interval '24 hours'`,
 }
@@ -232,4 +248,18 @@ export async function getApplications(): Promise<ApplicationRow[]> {
     .from(applications)
     .innerJoin(jobs, eq(jobs.id, applications.jobId))
     .orderBy(desc(applications.appliedAt))
+}
+
+export type JobDetail = JobRow & { summary: string | null; closed: boolean }
+
+/** One job with its description, for the Jobs side panel. */
+export async function getJob(id: number): Promise<JobDetail | null> {
+  if (!Number.isInteger(id)) return null
+  const d = await db()
+  const [row] = await d
+    .select({ ...jobColumns, summary: jobs.summary, closed: sql<boolean>`${jobs.closedAt} is not null` })
+    .from(jobs)
+    .innerJoin(sources, eq(sources.id, jobs.sourceId))
+    .where(eq(jobs.id, id))
+  return row ?? null
 }

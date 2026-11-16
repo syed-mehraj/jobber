@@ -8,16 +8,17 @@ export function scoreBand(score: number): ScoreBand {
   return 'weak'
 }
 
+/** Score colours are status, not actions: blue stays reserved for things you can click. */
 export const bandText: Record<ScoreBand, string> = {
   strong: 'text-success',
-  good: 'text-primary',
+  good: 'text-ink-2',
   partial: 'text-warning',
   weak: 'text-danger',
 }
 
 export const bandBadge: Record<ScoreBand, string> = {
   strong: 'bg-success-tint text-success',
-  good: 'bg-primary-tint text-primary',
+  good: 'bg-sunken text-ink-2',
   partial: 'bg-warning-tint text-warning',
   weak: 'bg-danger-tint text-danger',
 }

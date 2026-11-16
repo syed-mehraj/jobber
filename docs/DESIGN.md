@@ -31,7 +31,7 @@ In code the tokens live in `src/app/globals.css`. Tailwind names: `bg` → `canv
 
 Contrast: `text` on `surface` 17:1, `text-2` 7.4:1, `text-3` 3.4:1 (hints only, never body text), white on `primary` 5.2:1.
 
-**Match-score bands** (badges, gauges, job rows): 80–100 `success`, 60–79 `primary`, 40–59 `warning`, below 40 `danger`. The number is always shown next to the colour, so colour is never the only signal.
+**Match-score bands** (badges, gauges, job rows): 80–100 `success`, 60–79 neutral `text-2`, 40–59 `warning`, below 40 `danger`. Blue is never used for a score: it is reserved for things you can click. The number is always shown next to the colour, so colour is never the only signal.
 
 ## 2. Type
 
@@ -43,9 +43,9 @@ Contrast: `text` on `surface` 17:1, `text-2` 7.4:1, `text-3` 3.4:1 (hints only, 
 ## 3. Space, shape, depth
 
 - 4px grid. Common steps: 4, 8, 12, 16, 20, 24, 32, 40.
-- Radius: 8 (small buttons, inputs), 9 (buttons), 14 (cards), 16 (modals, drawers); badges are pills.
+- Radius: 8 (buttons, inputs, nested items), 12 (cards), 16 (modals, drawers); badges are pills.
 - Shadows, used sparingly on white over the dim canvas:
-  - `sm` `0 1px 2px rgb(15 23 42 / .06)`: cards
+  - cards: none. Flat white with a 1px `border` hairline does the work
   - `md` `0 4px 14px rgb(15 23 42 / .08)`: dropdowns, hovered cards
   - `lg` `0 16px 40px rgb(15 23 42 / .14)`: modals, drawers
 - Motion: 120ms for hovers, 180ms for menus, 240ms for drawers, ease-out. Respect reduced motion.
@@ -71,7 +71,7 @@ Contrast: `text` on `surface` 17:1, `text-2` 7.4:1, `text-3` 3.4:1 (hints only, 
 
 - **Header** (64px, white, bottom hairline): logo; three links (Dashboard, Resumes, Jobs) with a blue text and underline for the current page; **New resume** (primary); a ☰ button. Below 720px the links move into the menu and New resume becomes a "+" icon.
 - **Menu slider** (340px from the right, over a dimmed page): Go to (all pages with counts, including Applications), Daily search (status and Run search now), Settings (companies and sources, roles and locations, Telegram alerts), and a footer with initials and Sign out. Closes with ×, a click outside or Esc.
-- **Cards:** white, 12px radius, `sm` shadow, 20px padding; the title row holds a title, a meta line and actions on the right.
+- **Cards:** white, 12px radius, 1px `border`, no shadow, 16–20px padding; the title row holds a title, a meta line and actions on the right.
 - **Inputs:** 36px tall, white, `border-strong`, 8px radius; the focus border turns `primary` with the ring. The label sits above at 13/500; the hint below in `text-3`; errors in `danger` with an icon.
 - **Badges:** 22px pills. Score badges use the band colours; status badges (Saved, Applied, OA, Interview, Offer, Rejected) use tints.
 - **Tables:** header in `surface-muted`, 44px rows, hover row `surface-muted`, sticky header, right-aligned numbers.
@@ -100,7 +100,8 @@ Controls: font size (9–11pt), line height, section spacing, margins, accent (b
 A centred white card on the dim canvas: logo, password field, primary "Sign in" (lg).
 
 ### Dashboard
-Minimal: a greeting and one line, three numbers (new matches, applied, interviews), and today's five best matches with Apply. Full spec in [DASHBOARD.md](DASHBOARD.md); preview in `design/dashboard.html`.
+Minimal. Stat cards carry their own context so numbers never contradict each other: "Open matches 18, +6 new today", "Applied 3, 2 waiting to hear back", "Tests and interviews 1". The lead line says when the sources were last checked.
+ a greeting and one line, three numbers (new matches, applied, interviews), and today's five best matches with Apply. Full spec in [DASHBOARD.md](DASHBOARD.md); preview in `design/dashboard.html`.
 
 ### Resumes
 A grid of resume cards (page thumbnail, name, version tag, last edited, best score), plus "New resume" (primary) and "Upload PDF" (secondary).
@@ -121,7 +122,11 @@ Toolbar: Version ▾ · Undo/Redo · Form | Split | Preview · Tailor to job ✦
 Edits on either side update the other immediately; the field being edited is outlined in `primary` on both sides.
 
 ### Jobs
-Filters on the left (category, location, level, company, minimum score, posted within, sponsorship); a list on the right. Each row: company logo initial, title, company, location, posted, score badge, "Best with: Backend SDE", and Apply (primary sm) + Save (ghost). Clicking a row opens the detail drawer: why it fits, what's missing, requirements, the original posting link, and "Tailor a version" (subtle).
+Filter chips on top (level, where, kind of role), always visible and reversible. Below, a list (7 of 12 columns) and a sticky **fit panel** (5 of 12) for the selected role: why it matched (reasons, flags), skills from your work it mentions (and, with the skills dictionary, what it asks for that you lack), where Apply goes (the company's own ATS host), the description, and one primary action, "Apply on Greenhouse". J / K move through the list. On phones the panel opens above the list when a role is picked.
+
+Each row: initial, role (opens the panel), New; company · location; source · "posted 3d ago" (amber past 30 days) · level; match % in its band colour; Apply.
+
+Earlier plan, kept for reference: filters on the left (category, location, level, company, minimum score, posted within, sponsorship); a list on the right. Each row: company logo initial, title, company, location, posted, score badge, "Best with: Backend SDE", and Apply (primary sm) + Save (ghost). Clicking a row opens the detail drawer: why it fits, what's missing, requirements, the original posting link, and "Tailor a version" (subtle).
 
 ### Applications
 A kanban: Saved → Applied → OA → Interview → Offer / Rejected. Cards show company, role, the resume version used, date and next step. Drag between columns.

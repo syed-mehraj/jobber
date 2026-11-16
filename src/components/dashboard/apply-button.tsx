@@ -17,12 +17,15 @@ export function ApplyButton({
   label,
   applied = false,
   onApplied = markApplied,
+  prominent,
 }: {
   jobId: number
   url: string
   label: string
   applied?: boolean
   onApplied?: (jobId: number) => Promise<void>
+  /** Larger primary button with its own text, e.g. "Apply on Greenhouse". */
+  prominent?: string
 }) {
   const [step, setStep] = useState<Step>(applied ? 'applied' : 'idle')
   const [pending, start] = useTransition()
@@ -67,9 +70,9 @@ export function ApplyButton({
       rel="noopener noreferrer"
       aria-label={`Apply to ${label} (opens in a new tab)`}
       onClick={() => setStep('asking')}
-      className={buttonClass({ size: 'sm' })}
+      className={prominent ? buttonClass({ variant: 'primary' }) : buttonClass({ size: 'sm' })}
     >
-      Apply
+      {prominent ?? 'Apply'}
       <ExternalIcon />
     </a>
   )

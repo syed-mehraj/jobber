@@ -49,11 +49,12 @@
   --text-stat--line-height: 40px;
 
   --radius-control: 8px;
-  --radius-button: 9px;
-  --radius-card: 14px;
+  --radius-button: 8px;
+  --radius-card: 12px;
   --radius-panel: 16px;
 
-  --shadow-card: 0 1px 2px rgb(15 23 42 / 0.05);
+  /* Flat surfaces: a 1px border does the work; cards carry no shadow. */
+  --shadow-card: 0 0 #0000;
   --shadow-pop: 0 4px 14px rgb(15 23 42 / 0.08);
   --shadow-drawer: 0 20px 50px rgb(15 23 42 / 0.18);
 

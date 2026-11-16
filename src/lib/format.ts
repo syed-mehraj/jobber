@@ -22,3 +22,26 @@ export const regionLabel = {
   remote: 'Remote',
   international: 'Abroad',
 } as const
+
+/** Where Apply goes, in words: the ATS when it's a company board. */
+export const sourceLabel: Record<string, string> = {
+  greenhouse: 'Greenhouse',
+  lever: 'Lever',
+  ashby: 'Ashby',
+  smartrecruiters: 'SmartRecruiters',
+  simplify: 'GitHub list',
+  hackernews: 'Hacker News',
+}
+
+/** Days since a date, rounded down; null when unknown. */
+export function ageInDays(date: Date | null | undefined, now = new Date()): number | null {
+  if (!date) return null
+  return Math.max(0, Math.floor((now.getTime() - date.getTime()) / 86400000))
+}
+
+/** "today", "1d ago", "12d ago". */
+export function shortAge(date: Date | null | undefined, now = new Date()): string | null {
+  const days = ageInDays(date, now)
+  if (days === null) return null
+  return days === 0 ? 'today' : `${days}d ago`
+}

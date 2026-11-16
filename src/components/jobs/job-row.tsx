@@ -1,54 +1,64 @@
+import Link from 'next/link'
 import { ApplyButton } from '@/components/dashboard/apply-button'
 import { cx } from '@/lib/cx'
 import type { JobRow } from '@/lib/data'
-import { levelLabel, timeAgo } from '@/lib/format'
+import { ageInDays, levelLabel, shortAge, sourceLabel } from '@/lib/format'
 import { bandText, scoreBand } from '@/lib/score'
 
-/** One job: logo initial, role, company · location, match %, Apply. `detailed` adds level, reasons and flags. */
-export function JobRowItem({
-  job,
-  detailed = false,
-  isNew = false,
-}: {
-  job: JobRow
-  detailed?: boolean
-  isNew?: boolean
-}) {
+/**
+ * One job. Line 1: role (opens the fit panel) and New. Line 2: company · location.
+ * Line 3: where Apply goes, how old the posting is (amber past 30 days) and the level.
+ * Right: the match % in a status colour (never the action blue) and Apply.
+ */
+export function JobRowItem({ job, href, selected = false }: { job: JobRow; href: string; selected?: boolean }) {
+  const age = ageInDays(job.postedAt ?? job.firstSeenAt)
+  const stale = age !== null && age > 30
   return (
-    <li className="grid grid-cols-[36px_minmax(0,1fr)_auto] items-start gap-x-4 gap-y-2 border-b border-line px-4 py-3 last:border-b-0 hover:bg-surface-muted sm:grid-cols-[40px_minmax(0,1fr)_auto_auto] sm:items-center sm:px-[22px] sm:py-3.5">
+    <li
+      className={cx(
+        'relative grid grid-cols-[36px_minmax(0,1fr)_auto] items-start gap-x-4 gap-y-2 border-b border-line px-4 py-3 last:border-b-0 sm:grid-cols-[36px_minmax(0,1fr)_auto_auto] sm:items-center sm:px-5',
+        selected ? 'bg-primary-tint/60 shadow-[inset_3px_0_0_var(--color-primary)]' : 'hover:bg-surface-muted',
+      )}
+    >
       <span
         aria-hidden="true"
-        className="grid size-9 place-items-center rounded-[10px] bg-sunken font-semibold text-ink-2 sm:size-10"
+        className="grid size-9 place-items-center rounded-control border border-line bg-surface-muted text-small font-semibold text-ink-2"
       >
         {job.company.trim()[0]?.toUpperCase() ?? '?'}
       </span>
       <span className="min-w-0">
-        <a
-          href={job.url}
-          target="_blank"
-          rel="noopener noreferrer"
+        <Link
+          href={href}
+          scroll={false}
+          aria-current={selected ? 'true' : undefined}
+          data-job-link
           className="flex items-center gap-2 font-medium hover:text-primary"
         >
           <span className="truncate">{job.title}</span>
-          {isNew && (
+          {job.isNew && (
             <span className="shrink-0 rounded-full bg-primary-tint px-2 text-caption leading-5 font-semibold text-primary">
               New
             </span>
           )}
-        </a>
-        <small className="block truncate text-[13.5px] text-ink-3">
+        </Link>
+        <span className="block truncate text-small text-ink-2">
           {job.company} · {job.location}
-        </small>
-        {detailed && (
-          <small className="mt-1 block text-small text-ink-2">
-            {levelLabel[job.level]} · {job.category} · seen {timeAgo(job.firstSeenAt)} · via {job.source}
-            {job.reasons.length > 2 && <> · {job.reasons.slice(2).join(' · ')}</>}
-            {job.flags.length > 0 && <span className="text-warning"> · {job.flags.join(' · ')}</span>}
-          </small>
-        )}
+        </span>
+        <span className="mt-0.5 block truncate text-caption text-ink-3">
+          {sourceLabel[job.sourceKind] ?? job.source}
+          {' · '}
+          <span className={cx(stale && 'font-medium text-warning')}>
+            {job.postedAt ? `posted ${shortAge(job.postedAt)}` : `seen ${shortAge(job.firstSeenAt)}`}
+            {stale && ' (may be stale)'}
+          </span>
+          {' · '}
+          {levelLabel[job.level]}
+        </span>
       </span>
       <span className="flex flex-col items-end text-caption text-ink-3">
-        <strong className={cx('text-large font-semibold', bandText[scoreBand(job.score)])}>{job.score}%</strong>
+        <strong className={cx('text-large font-semibold tabular-nums', bandText[scoreBand(job.score)])}>
+          {job.score}%
+        </strong>
         match
       </span>
       <span className="col-start-2 col-end-[-1] sm:col-auto">

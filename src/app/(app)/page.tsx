@@ -9,6 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { cx } from '@/lib/cx'
 import { getCounts, getSearchStatus, getTopMatches, refreshIfStale } from '@/lib/data'
 import { owner } from '@/lib/owner'
+import { timeAgo } from '@/lib/format'
 import { runSearchNow } from './actions'
 
 export const metadata: Metadata = { title: 'Dashboard' }
@@ -32,62 +33,60 @@ async function DashboardBody() {
   const neverRun = !status.lastRunAt && !status.running
 
   const stats = [
-    { href: '/jobs', value: counts.newMatches, label: 'New matches', short: 'New', accent: true },
-    { href: '/applications', value: counts.applied, label: 'Applied' },
-    { href: '/applications', value: counts.interviews, label: 'Interviews' },
+    {
+      href: '/jobs',
+      value: counts.newMatches,
+      label: 'Open matches',
+      context: counts.newToday > 0 ? `+${counts.newToday} new today` : 'None new today',
+      good: counts.newToday > 0,
+    },
+    {
+      href: '/applications',
+      value: counts.applied,
+      label: 'Applied',
+      context: counts.applied ? `${counts.waiting} waiting to hear back` : 'Apply from a match',
+    },
+    {
+      href: '/applications',
+      value: counts.interviews,
+      label: 'Tests and interviews',
+      context: counts.offers
+        ? `${counts.offers} offer${counts.offers === 1 ? '' : 's'}`
+        : 'Set the stage in Applications',
+    },
   ]
 
   return (
     <>
       <p className="mt-1.5 text-large text-ink-2">
-        {neverRun || status.running ? (
-          status.running ? (
-            'Searching company career sites now. Refresh in a minute.'
-          ) : (
-            'Your first job search starts now. Refresh in a minute.'
-          )
-        ) : counts.newToday > 0 ? (
-          <>
-            <b className="font-semibold text-primary">
-              {counts.newToday} new job{counts.newToday === 1 ? '' : 's'}
-            </b>{' '}
-            match your profile today.
-          </>
-        ) : (
-          'No new matches yet today. The best open ones are below.'
-        )}
+        {status.running
+          ? 'Searching company career sites now. Refresh in a minute.'
+          : neverRun
+            ? 'Your first job search starts now. Refresh in a minute.'
+            : `Checked ${status.sourcesTotal} sources ${timeAgo(status.lastRunAt)}. Here is what's worth applying to.`}
       </p>
 
-      <div className="mt-7 grid grid-cols-3 gap-2 sm:gap-3">
+      <div className="mt-6 grid grid-cols-1 gap-3 min-[560px]:grid-cols-3">
         {stats.map((s) => (
           <Link
             key={s.label}
             href={s.href}
-            className="block rounded-card border border-line bg-surface p-3.5 shadow-card transition-colors hover:border-primary-soft sm:px-[22px] sm:py-5"
+            className="block rounded-card border border-line bg-surface px-4 py-3.5 transition-colors hover:border-line-strong sm:px-5 sm:py-4"
           >
-            <b
-              className={cx(
-                'block text-[26px] leading-8 font-semibold tracking-[-0.02em] sm:text-stat',
-                s.accent && 'text-primary',
-              )}
-            >
-              {s.value}
-            </b>
-            <span className="text-small whitespace-nowrap text-ink-2 sm:text-body">
-              {s.short ? (
-                <>
-                  <span className="min-[421px]:hidden">{s.short}</span>
-                  <span className="max-[420px]:hidden">{s.label}</span>
-                </>
-              ) : (
-                s.label
-              )}
+            <span className="flex items-baseline justify-between gap-3 min-[560px]:block">
+              <span className="block text-small font-medium text-ink-2">{s.label}</span>
+              <b className="block text-[28px] leading-8 font-semibold tracking-[-0.02em] tabular-nums min-[560px]:mt-1">
+                {s.value}
+              </b>
+            </span>
+            <span className={cx('mt-0.5 block text-small', s.good ? 'font-medium text-success' : 'text-ink-3')}>
+              {s.context}
             </span>
           </Link>
         ))}
       </div>
 
-      <Card className="mt-7" aria-labelledby="best-matches">
+      <Card className="mt-6" aria-labelledby="best-matches">
         <CardHeader
           id="best-matches"
           title="Today's best matches"
@@ -102,7 +101,7 @@ async function DashboardBody() {
         {top.length ? (
           <ul>
             {top.map((job) => (
-              <JobRowItem key={job.id} job={job} isNew={job.isNew} />
+              <JobRowItem key={job.id} job={job} href={`/jobs?job=${job.id}`} />
             ))}
           </ul>
         ) : (
@@ -114,8 +113,8 @@ async function DashboardBody() {
       </Card>
 
       <p className="mt-5 text-[12.5px] text-ink-3">
-        Match is keyword-based for now: level, location, and the skills from your work that a posting mentions. Gemini
-        scoring replaces it once the key is added.
+        Match % weighs the level, the location, the skills from your work that the posting mentions, and how fresh it
+        is. Open a role to see why it matched. Gemini scoring replaces it once the key is added.
       </p>
     </>
   )
@@ -125,12 +124,12 @@ function DashboardSkeleton() {
   return (
     <div aria-busy="true" aria-label="Loading">
       <Skeleton className="mt-3 h-5 w-72" />
-      <div className="mt-7 grid grid-cols-3 gap-2 sm:gap-3">
-        <Skeleton className="h-[86px] rounded-card sm:h-[106px]" />
-        <Skeleton className="h-[86px] rounded-card sm:h-[106px]" />
-        <Skeleton className="h-[86px] rounded-card sm:h-[106px]" />
+      <div className="mt-6 grid grid-cols-1 gap-3 min-[560px]:grid-cols-3">
+        <Skeleton className="h-[74px] rounded-card min-[560px]:h-[104px]" />
+        <Skeleton className="h-[74px] rounded-card min-[560px]:h-[104px]" />
+        <Skeleton className="h-[74px] rounded-card min-[560px]:h-[104px]" />
       </div>
-      <Skeleton className="mt-7 h-[420px] rounded-card" />
+      <Skeleton className="mt-6 h-[420px] rounded-card" />
     </div>
   )
 }

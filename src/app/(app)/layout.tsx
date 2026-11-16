@@ -19,7 +19,7 @@ export default function AppLayout({ children }: LayoutProps<'/'>) {
           <HeaderWithData />
         </Suspense>
       </MenuStateProvider>
-      <main className="mx-auto max-w-[1040px] px-4 pt-7 pb-16 sm:px-5 sm:pt-9">{children}</main>
+      <main className="mx-auto max-w-[1160px] px-4 pt-7 pb-16 sm:px-5 sm:pt-9">{children}</main>
     </>
   )
 }
