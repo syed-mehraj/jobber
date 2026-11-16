@@ -74,6 +74,54 @@ describe('runSearch', () => {
     expect(byId.d.closedAt).toBeNull()
   })
 
+  it('stores the skills a posting asks for and the ones the profile lacks', async () => {
+    board = [
+      {
+        ...posting('a', 'Software Engineering Intern'),
+        description: 'Python, React, Rust and Kubernetes. 0-1 years of experience.',
+      },
+    ]
+    await runSearch(db, 'manual', { adapters: fake, now })
+    const [job] = await db.select().from(jobs)
+    expect(job.required).toEqual(['python', 'react', 'rust', 'kubernetes'])
+    expect(job.matched).toEqual(['python', 'react'])
+    expect(job.missing).toEqual(['rust', 'kubernetes'])
+
+    // A later run refreshes them when the posting changes.
+    clock = new Date('2026-11-16T07:00:00Z')
+    board = [{ ...board[0], description: 'Python and Rust. 0-1 years of experience.' }]
+    await runSearch(db, 'refresh', { adapters: fake, now })
+    const [again] = await db.select().from(jobs)
+    expect(again.required).toEqual(['python', 'rust'])
+    expect(again.missing).toEqual(['rust'])
+  })
+
+  it('keeps a dismissed job dismissed when a later run sees it again', async () => {
+    board = [posting('a', 'Software Engineering Intern'), posting('c', 'Graduate ML Engineer')]
+    await runSearch(db, 'manual', { adapters: fake, now })
+    const dismissedAt = new Date('2026-11-16T06:30:00Z')
+    await db.update(jobs).set({ dismissedAt }).where(eq(jobs.externalId, 'a'))
+
+    clock = new Date('2026-11-16T07:00:00Z')
+    board = [posting('a', 'Software Engineering Intern (Backend)')]
+    await runSearch(db, 'refresh', { adapters: fake, now })
+    const byId = Object.fromEntries((await db.select().from(jobs)).map((r) => [r.externalId, r]))
+    expect(byId.a.title).toBe('Software Engineering Intern (Backend)')
+    expect(byId.a.dismissedAt?.toISOString()).toBe(dismissedAt.toISOString())
+    expect(byId.c.dismissedAt).toBeNull()
+
+    // Even after it closes and comes back, it stays dismissed.
+    clock = new Date('2026-11-16T08:00:00Z')
+    board = [posting('c', 'Graduate ML Engineer')]
+    await runSearch(db, 'refresh', { adapters: fake, now })
+    clock = new Date('2026-11-16T09:00:00Z')
+    board = [posting('a', 'Software Engineering Intern (Backend)'), posting('c', 'Graduate ML Engineer')]
+    await runSearch(db, 'refresh', { adapters: fake, now })
+    const [a] = await db.select().from(jobs).where(eq(jobs.externalId, 'a'))
+    expect(a.closedAt).toBeNull()
+    expect(a.dismissedAt?.toISOString()).toBe(dismissedAt.toISOString())
+  })
+
   it('does not start a second run while one is going', async () => {
     await db.insert(runs).values({ trigger: 'refresh', startedAt: new Date('2026-11-16T05:58:00Z') })
     expect(await runSearch(db, 'manual', { adapters: fake, now })).toBeNull()

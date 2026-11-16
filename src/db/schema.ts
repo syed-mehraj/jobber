@@ -57,6 +57,18 @@ export const jobs = pgTable(
       .array()
       .notNull()
       .default(sql`'{}'::text[]`),
+    /** Canonical skills the posting mentions (see src/jobs/skills.ts). */
+    required: text('required')
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    /** `required` minus the profile's skills: what the posting asks for that the profile lacks. */
+    missing: text('missing')
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    /** Set when the job is dismissed from the list. Searches never clear it. */
+    dismissedAt: timestamp('dismissed_at', { withTimezone: true }),
     /** Short notes the filters raised, e.g. "Visa sponsorship not mentioned". */
     flags: text('flags')
       .array()

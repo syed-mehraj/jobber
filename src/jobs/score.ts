@@ -1,4 +1,5 @@
 import type { Level, Region } from '@/db/schema'
+import { canonicalSkill, extractSkills } from './skills'
 import type { RawPosting } from './types'
 
 /*
@@ -59,26 +60,31 @@ const REGION_TEXT: Record<Region, string> = {
   international: 'Abroad, with sponsorship',
 }
 
-function mentions(text: string, skill: string): boolean {
-  const escaped = skill.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  return new RegExp(`(^|[^a-z0-9])${escaped}([^a-z0-9]|$)`, 'i').test(text)
-}
+/** Postings that list at least this many known skills are scored by how many of them the profile covers. */
+const COVERAGE_MIN_SKILLS = 3
+const SKILL_POINTS = 30
 
 export function scoreJob(
   p: RawPosting,
   c: { level: Level; region: Region; category: string },
   profile: Profile = defaultProfile,
   now = new Date(),
-): { score: number; matched: string[]; reasons: string[] } {
+): { score: number; matched: string[]; missing: string[]; required: string[]; reasons: string[] } {
   const text = `${p.title}\n${p.description ?? ''}`
-  const matched = profile.skills.filter((s) => mentions(text, s))
+  // Skills the posting asks for, as canonical names, and how the profile's skills (canonicalised too) line up with them.
+  const required = extractSkills(text)
+  const have = new Set(profile.skills.map(canonicalSkill))
+  const matched = required.filter((s) => have.has(s))
+  const missing = required.filter((s) => !have.has(s))
   const reasons = [LEVEL_TEXT[c.level], REGION_TEXT[c.region]]
 
   let score = LEVEL_POINTS[c.level] + REGION_POINTS[c.region]
   score += profile.preferred.includes(c.category) ? 14 : 8
 
-  if (p.description) score += Math.min(30, matched.length * 6)
-  else score += 10 // no description to check; give a neutral share
+  if (!p.description)
+    score += 10 // no description to check; give a neutral share
+  else if (required.length >= COVERAGE_MIN_SKILLS) score += (matched.length / required.length) * SKILL_POINTS
+  else score += Math.min(SKILL_POINTS, matched.length * 6)
   if (matched.length) reasons.push(`Mentions ${matched.slice(0, 4).join(', ')}`)
 
   if (p.postedAt) {
@@ -89,5 +95,5 @@ export function scoreJob(
     } else if (days <= 7) score += 5
     else if (days <= 14) score += 2
   }
-  return { score: Math.max(0, Math.min(99, Math.round(score))), matched, reasons }
+  return { score: Math.max(0, Math.min(99, Math.round(score))), matched, missing, required, reasons }
 }
