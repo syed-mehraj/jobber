@@ -27,3 +27,6 @@ private/
 *.pem
 next-env.d.ts
 /build
+
+# local database
+.data/

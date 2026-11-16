@@ -1,13 +1,14 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useEffect, useRef, useState, useTransition, type ReactNode } from 'react'
 import { Button, iconButtonClass } from '@/components/ui/button'
 import {
   ApplicationsIcon,
   BellIcon,
   CloseIcon,
   CompaniesIcon,
+  CompassIcon,
   DashboardIcon,
   JobsIcon,
   LocationIcon,
@@ -15,7 +16,7 @@ import {
   SwatchIcon,
 } from '@/components/ui/icons'
 import { cx } from '@/lib/cx'
-import type { Counts, SearchStatus, User } from '@/lib/sample-data'
+import type { ShellActions, ShellData, User } from './types'
 import { Brand } from './brand'
 import { isActive } from './nav'
 
@@ -28,14 +29,14 @@ type Props = {
   onNavigate: () => void
   pathname: string
   user: User
-  counts: Counts
-  search: SearchStatus
+  data: ShellData
+  actions: ShellActions
 }
 
 const FOCUSABLE = 'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'
 
 /** The menu slider: every page and every action that isn't in the header. */
-export function MenuDrawer({ id, open, onClose, onNavigate, pathname, user, counts, search }: Props) {
+export function MenuDrawer({ id, open, onClose, onNavigate, pathname, user, data, actions }: Props) {
   const panel = useRef<HTMLElement>(null)
   const closeButton = useRef<HTMLButtonElement>(null)
 
@@ -132,23 +133,13 @@ export function MenuDrawer({ id, open, onClose, onNavigate, pathname, user, coun
         <nav aria-label="Menu" className="flex-1 overflow-y-auto p-3">
           <Group>Go to</Group>
           {item('/', 'Dashboard', <DashboardIcon />)}
-          {item('/resumes', 'Resumes', <ResumeIcon />, counts.resumes)}
-          {item('/jobs', 'Jobs', <JobsIcon />, counts.newMatches)}
-          {item('/applications', 'Applications', <ApplicationsIcon />, counts.applied)}
+          {item('/resumes', 'Resumes', <ResumeIcon />, data.counts?.resumes)}
+          {item('/jobs', 'Jobs', <JobsIcon />, data.counts?.newMatches)}
+          {item('/applications', 'Applications', <ApplicationsIcon />, data.counts?.applied)}
+          {item('/programs', 'Programs and other sites', <CompassIcon />)}
 
-          <Group>Daily search</Group>
-          <div className="mx-1 mt-1.5 rounded-card border border-line bg-surface-muted p-3.5">
-            <p className="flex items-center gap-2 text-[14px] font-semibold">
-              <span aria-hidden="true" className="size-2 rounded-full bg-success" />
-              {search.schedule}
-            </p>
-            <p className="mt-1 mb-3 text-small text-ink-2">
-              Last run {search.lastRun} · {search.sourcesWorking} of {search.sourcesTotal} sources working
-            </p>
-            <Button size="sm" disabled title="Available once the daily search is built (Phase 7)">
-              Run search now
-            </Button>
-          </div>
+          <Group>Job search</Group>
+          <SearchCard data={data} run={actions.runSearchNow} />
 
           <Group>Settings</Group>
           {item('/settings/companies', 'Companies and sources', <CompaniesIcon />)}
@@ -165,12 +156,51 @@ export function MenuDrawer({ id, open, onClose, onNavigate, pathname, user, coun
             {user.initials}
           </span>
           <span className="flex-1 font-medium">{user.firstName}</span>
-          <Button size="sm" disabled title="Sign-in arrives with Phase 2">
-            Sign out
-          </Button>
+          <form action={actions.signOut}>
+            <Button size="sm" type="submit">
+              Sign out
+            </Button>
+          </form>
         </div>
       </aside>
     </>
+  )
+}
+
+function SearchCard({ data, run }: { data: ShellData; run: ShellActions['runSearchNow'] }) {
+  const [pending, start] = useTransition()
+  const [message, setMessage] = useState<string | null>(null)
+  const search = data.search
+  const tone = !search
+    ? 'bg-ink-3'
+    : search.running || pending
+      ? 'bg-primary animate-pulse'
+      : search.healthy
+        ? 'bg-success'
+        : 'bg-warning'
+  return (
+    <div className="mx-1 mt-1.5 rounded-card border border-line bg-surface-muted p-3.5">
+      <p className="flex items-center gap-2 text-[14px] font-semibold">
+        <span aria-hidden="true" className={cx('size-2 rounded-full', tone)} />
+        {pending ? 'Searching now…' : (search?.label ?? 'Loading…')}
+      </p>
+      <p className="mt-1 mb-3 text-small text-ink-2" aria-live="polite">
+        {message ?? search?.detail ?? '\u00a0'}
+      </p>
+      <Button
+        size="sm"
+        loading={pending}
+        onClick={() =>
+          start(async () => {
+            setMessage(null)
+            const result = await run()
+            setMessage(result.message)
+          })
+        }
+      >
+        {pending ? 'Searching' : 'Run search now'}
+      </Button>
+    </div>
   )
 }
 

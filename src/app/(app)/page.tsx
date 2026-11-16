@@ -1,30 +1,61 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Suspense } from 'react'
-import { ApplyButton } from '@/components/dashboard/apply-button'
 import { GreetingFallback, GreetingHeading } from '@/components/dashboard/greeting-heading'
+import { RunSearchButton } from '@/components/jobs/run-search-button'
+import { JobRowItem } from '@/components/jobs/job-row'
 import { Card, CardHeader } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 import { cx } from '@/lib/cx'
-import { sampleCounts, sampleMatches, sampleUser } from '@/lib/sample-data'
-import { bandText, scoreBand } from '@/lib/score'
+import { getCounts, getSearchStatus, getTopMatches, refreshIfStale } from '@/lib/data'
+import { owner } from '@/lib/owner'
+import { runSearchNow } from './actions'
 
 export const metadata: Metadata = { title: 'Dashboard' }
 
 export default function DashboardPage() {
-  const counts = sampleCounts
+  return (
+    <>
+      <Suspense fallback={<GreetingFallback name={owner.firstName} />}>
+        <GreetingHeading name={owner.firstName} />
+      </Suspense>
+      <Suspense fallback={<DashboardSkeleton />}>
+        <DashboardBody />
+      </Suspense>
+    </>
+  )
+}
+
+async function DashboardBody() {
+  await refreshIfStale()
+  const [counts, top, status] = await Promise.all([getCounts(), getTopMatches(5), getSearchStatus()])
+  const neverRun = !status.lastRunAt && !status.running
+
   const stats = [
     { href: '/jobs', value: counts.newMatches, label: 'New matches', short: 'New', accent: true },
     { href: '/applications', value: counts.applied, label: 'Applied' },
-    { href: '/applications?stage=interview', value: counts.interviews, label: 'Interviews' },
+    { href: '/applications', value: counts.interviews, label: 'Interviews' },
   ]
 
   return (
     <>
-      <Suspense fallback={<GreetingFallback name={sampleUser.firstName} />}>
-        <GreetingHeading name={sampleUser.firstName} />
-      </Suspense>
       <p className="mt-1.5 text-large text-ink-2">
-        <b className="font-semibold text-primary">{counts.newToday} new jobs</b> match your resumes today.
+        {neverRun || status.running ? (
+          status.running ? (
+            'Searching company career sites now. Refresh in a minute.'
+          ) : (
+            'Your first job search starts now. Refresh in a minute.'
+          )
+        ) : counts.newToday > 0 ? (
+          <>
+            <b className="font-semibold text-primary">
+              {counts.newToday} new job{counts.newToday === 1 ? '' : 's'}
+            </b>{' '}
+            match your profile today.
+          </>
+        ) : (
+          'No new matches yet today. The best open ones are below.'
+        )}
       </p>
 
       <div className="mt-7 grid grid-cols-3 gap-2 sm:gap-3">
@@ -61,46 +92,45 @@ export default function DashboardPage() {
           id="best-matches"
           title="Today's best matches"
           action={
-            <Link href="/jobs" className="text-[14px] font-medium text-primary hover:underline">
-              See all {counts.newMatches} →
-            </Link>
+            counts.newMatches > 0 && (
+              <Link href="/jobs" className="text-[14px] font-medium text-primary hover:underline">
+                See all {counts.newMatches} →
+              </Link>
+            )
           }
         />
-        <ul>
-          {sampleMatches.map((m) => (
-            <li
-              key={m.id}
-              className="grid grid-cols-[36px_minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 border-b border-line px-4 py-3 last:border-b-0 hover:bg-surface-muted sm:grid-cols-[40px_minmax(0,1fr)_auto_auto] sm:px-[22px] sm:py-3.5"
-            >
-              <span
-                aria-hidden="true"
-                className="grid size-9 place-items-center rounded-[10px] bg-sunken font-semibold text-ink-2 sm:size-10"
-              >
-                {m.company[0]}
-              </span>
-              <span className="min-w-0">
-                <Link href="/jobs" className="block truncate font-medium hover:text-primary">
-                  {m.role}
-                </Link>
-                <small className="block text-[13.5px] text-ink-3">
-                  {m.company} · {m.location}
-                </small>
-              </span>
-              <span className="flex flex-col items-end text-caption text-ink-3">
-                <strong className={cx('text-large font-semibold', bandText[scoreBand(m.score)])}>{m.score}%</strong>
-                match
-              </span>
-              <span className="col-start-2 col-end-[-1] sm:col-auto">
-                <ApplyButton url={m.applyUrl} label={`${m.role} at ${m.company}`} />
-              </span>
-            </li>
-          ))}
-        </ul>
+        {top.length ? (
+          <ul>
+            {top.map((job) => (
+              <JobRowItem key={job.id} job={job} isNew={job.isNew} />
+            ))}
+          </ul>
+        ) : (
+          <div className="grid justify-items-center gap-3 px-6 py-12 text-center">
+            <p className="text-ink-2">Matches will appear here after the first search.</p>
+            <RunSearchButton run={runSearchNow} />
+          </div>
+        )}
       </Card>
 
       <p className="mt-5 text-[12.5px] text-ink-3">
-        Sample data until the daily search runs. Company names show the target list only; these are not real postings.
+        Match is keyword-based for now: level, location, and the skills from your work that a posting mentions. Gemini
+        scoring replaces it once the key is added.
       </p>
     </>
+  )
+}
+
+function DashboardSkeleton() {
+  return (
+    <div aria-busy="true" aria-label="Loading">
+      <Skeleton className="mt-3 h-5 w-72" />
+      <div className="mt-7 grid grid-cols-3 gap-2 sm:gap-3">
+        <Skeleton className="h-[86px] rounded-card sm:h-[106px]" />
+        <Skeleton className="h-[86px] rounded-card sm:h-[106px]" />
+        <Skeleton className="h-[86px] rounded-card sm:h-[106px]" />
+      </div>
+      <Skeleton className="mt-7 h-[420px] rounded-card" />
+    </div>
   )
 }

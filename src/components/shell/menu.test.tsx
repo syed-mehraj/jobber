@@ -1,9 +1,9 @@
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import type { AnchorHTMLAttributes } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { sampleCounts, sampleSearch, sampleUser } from '@/lib/sample-data'
 import { AppHeader } from './app-header'
 import { isActive } from './nav'
+import type { ShellData } from './types'
 
 vi.mock('next/link', () => ({
   default: ({ href, onNavigate, ...rest }: AnchorHTMLAttributes<HTMLAnchorElement> & { onNavigate?: () => void }) => (
@@ -14,8 +14,14 @@ vi.mock('next/link', () => ({
 let pathname = '/'
 vi.mock('next/navigation', () => ({ usePathname: () => pathname }))
 
+const data: ShellData = {
+  counts: { resumes: 0, newMatches: 24, applied: 9 },
+  search: { label: 'Checks every 10 min', detail: 'Last run just now', healthy: true, running: false },
+}
+const actions = { runSearchNow: vi.fn(async () => ({ ok: true, message: '3 new' })), signOut: vi.fn(async () => {}) }
+
 function renderHeader() {
-  return render(<AppHeader user={sampleUser} counts={sampleCounts} search={sampleSearch} />)
+  return render(<AppHeader user={{ firstName: 'Syed', initials: 'SM' }} data={data} actions={actions} />)
 }
 
 describe('isActive', () => {
@@ -80,6 +86,17 @@ describe('header and menu slider', () => {
       expect(Array.from(menu.querySelectorAll('a')).some((a) => a.textContent?.startsWith(name))).toBe(true)
     }
     expect(screen.getByText('Run search now')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument()
+  })
+
+  it('runs a search from the menu and shows the result', async () => {
+    renderHeader()
+    fireEvent.click(screen.getByRole('button', { name: 'Open menu' }))
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Run search now' }))
+    })
+    expect(actions.runSearchNow).toHaveBeenCalled()
+    expect(await screen.findByText('3 new')).toBeInTheDocument()
   })
 
   it('closes when a menu link is followed', () => {

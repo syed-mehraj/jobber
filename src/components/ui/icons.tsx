@@ -112,3 +112,10 @@ export const CheckIcon = (p: IconProps) => (
     <path d="M3.5 8.5l3 3 6-7" />
   </svg>
 )
+
+export const CompassIcon = (p: IconProps) => (
+  <svg {...large(p)}>
+    <circle cx="10" cy="10" r="7.5" />
+    <path d="M12.8 7.2l-1.6 4-4 1.6 1.6-4z" />
+  </svg>
+)

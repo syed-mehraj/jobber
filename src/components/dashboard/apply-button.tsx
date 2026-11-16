@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
+import { markApplied } from '@/app/(app)/actions'
 import { Button, buttonClass } from '@/components/ui/button'
 import { CheckIcon, ExternalIcon } from '@/components/ui/icons'
 
@@ -8,10 +9,23 @@ type Step = 'idle' | 'asking' | 'applied'
 
 /**
  * Apply opens the company's own page in a new tab, then asks "Did you apply?".
- * Yes marks it applied; Not yet goes back to the Apply button.
+ * Yes records it in Applications; Not yet goes back to the Apply button.
  */
-export function ApplyButton({ url, label }: { url: string; label: string }) {
-  const [step, setStep] = useState<Step>('idle')
+export function ApplyButton({
+  jobId,
+  url,
+  label,
+  applied = false,
+  onApplied = markApplied,
+}: {
+  jobId: number
+  url: string
+  label: string
+  applied?: boolean
+  onApplied?: (jobId: number) => Promise<void>
+}) {
+  const [step, setStep] = useState<Step>(applied ? 'applied' : 'idle')
+  const [pending, start] = useTransition()
 
   if (step === 'applied') {
     return (
@@ -26,7 +40,17 @@ export function ApplyButton({ url, label }: { url: string; label: string }) {
     return (
       <span role="group" aria-label={`Did you apply to ${label}?`} className="inline-flex items-center gap-2">
         <span className="text-small text-ink-2">Did you apply?</span>
-        <Button size="sm" variant="subtle" onClick={() => setStep('applied')}>
+        <Button
+          size="sm"
+          variant="subtle"
+          loading={pending}
+          onClick={() =>
+            start(async () => {
+              await onApplied(jobId)
+              setStep('applied')
+            })
+          }
+        >
           Yes
         </Button>
         <Button size="sm" variant="ghost" onClick={() => setStep('idle')}>

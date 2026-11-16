@@ -16,7 +16,7 @@ for f in $staged; do
   echo "$added" | grep -Eq 'postgres(ql)?://[^:/ ]+:[^@ ]+@' && { echo "blocked: database URL with a password in $f"; fail=1; }
   echo "$added" | grep -Eq -- '-----BEGIN [A-Z ]*PRIVATE KEY-----' && { echo "blocked: private key in $f"; fail=1; }
   echo "$added" | grep -Eiq '(api[_-]?key|secret|token|password)["'"'"' ]*[:=] *["'"'"'][^"'"'"' ]{12,}' && { echo "blocked: hard-coded credential in $f"; fail=1; }
-  echo "$added" | grep -Eq '(\+91[ -]?)?[6-9][0-9]{4}[ -]?[0-9]{5}' && { echo "blocked: phone number in $f"; fail=1; }
+  echo "$added" | grep -Eq '(^|[^0-9])(\+91[ -]?)?[6-9][0-9]{4}[ -]?[0-9]{5}([^0-9]|$)' && { echo "blocked: phone number in $f"; fail=1; }
 done
 [ $fail -eq 1 ] && echo "Commit stopped. Move the value to .env.local or Vercel settings." && exit 1
 exit 0

@@ -6,15 +6,15 @@ import { useCallback, useRef, useState } from 'react'
 import { buttonClass, iconButtonClass } from '@/components/ui/button'
 import { MenuIcon, PlusIcon } from '@/components/ui/icons'
 import { cx } from '@/lib/cx'
-import type { Counts, SearchStatus, User } from '@/lib/sample-data'
 import { Brand } from './brand'
 import { MenuDrawer } from './menu-drawer'
 import { headerLinks, isActive } from './nav'
+import type { ShellActions, ShellData, User } from './types'
 
-type Props = { user: User; counts: Counts; search: SearchStatus }
+type Props = { user: User; data: ShellData; actions: ShellActions }
 
 /** The header holds only what's needed; everything else is in the menu slider. */
-export function AppHeader({ user, counts, search }: Props) {
+export function AppHeader({ user, data, actions }: Props) {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
   const menuButton = useRef<HTMLButtonElement>(null)
@@ -79,8 +79,8 @@ export function AppHeader({ user, counts, search }: Props) {
         onNavigate={() => setOpen(false)}
         pathname={pathname}
         user={user}
-        counts={counts}
-        search={search}
+        data={data}
+        actions={actions}
       />
     </>
   )

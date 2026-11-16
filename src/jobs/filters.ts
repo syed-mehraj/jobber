@@ -1,0 +1,124 @@
+import type { Level, Region } from '@/db/schema'
+import type { RawPosting } from './types'
+
+/*
+ * Hard filters, no AI. A posting is kept only if a 2027 CS graduate in Hyderabad can realistically get it:
+ * - a software / ML / data engineering role (not sales, design, hardware, management…)
+ * - internship, new grad or entry level (senior, staff, lead, "II/III" and 2+ years required are dropped)
+ * - in Hyderabad, elsewhere in India, remote that India can do, or abroad with visa sponsorship
+ * - not for a past intake (titles naming 2026 or earlier) and not older than 45 days
+ */
+
+export type Classified =
+  { keep: false; reason: string } | { keep: true; level: Level; region: Region; category: string; flags: string[] }
+
+const TECH =
+  /\b(software|sde|swe|developer|engineer(ing)?|programmer|machine learning|ml|ai|data scien\w*|research scien\w*|applied scien\w*|data engineer|full[- ]?stack|back[- ]?end|front[- ]?end|devops|sre|android|ios|mobile)\b/i
+const NOT_TECH =
+  /\b(sales|account (executive|manager)|marketing|recruit\w*|talent|legal|counsel|finance|accountant|payroll|hr|human resources|customer|support|success|solutions? (engineer|consultant|architect)|pre-?sales|field|business|operations|program manager|product manager|project manager|designer|design|content|writer|mechanical|civil|electrical|hardware|analog|asic|rtl|rf|silicon|physical design|verification|manufacturing|quality assurance technician|technician|construction|nurse|clinical|pharma\w*|teacher|tutor)\b/i
+const SENIOR =
+  /\b(senior|sr\.?|staff|principal|lead|leader|manager|director|head|architect|vp|vice president|chief|distinguished|expert|specialist ii|(engineer|developer|sde|swe|scientist)\s*(ii|iii|iv|2|3|4)|(ii|iii|iv)$|l[4-9]|e[4-9]|mts\s*(2|3|ii|iii)|smts|lmts|pmts)\b/i
+const INTERN = /\b(intern(ship)?|co-?op|apprentice(ship)?|trainee|summer analyst|industrial training)\b/i
+const NEW_GRAD =
+  /\b(new grad\w*|graduate|university|campus|early career|entry[- ]level|fresher|freshers|junior|jr\.?|associate (software|engineer|developer)|(sde|swe|engineer|developer)\s*(i|1)\b|level 1|grad(uate)? program|class of 2027|2027)\b/i
+const PAST_INTAKE = /\b20(1\d|2[0-6])\b/
+const EXPERIENCE =
+  /(\d{1,2})\s*(?:\+|plus)?\s*(?:-|–|to)?\s*(?:\d{1,2})?\s*\+?\s*years?(?:'|’)?\s*(?:of)?\s*(?:\w+\s){0,4}?(?:experience|exp\b)/gi
+const NO_SPONSOR =
+  /(not (able|going) to (offer|provide) (visa )?sponsorship|unable to (offer|provide)? ?sponsor|no (visa )?sponsorship|without (the need for )?(visa )?sponsorship|must be (legally )?authori[sz]ed to work|u\.?s\.? citizen(ship)?|security clearance|green card|permanent resident)/i
+const SPONSOR =
+  /(visa sponsorship (is )?(available|provided|offered)|we (will|can|do) sponsor|sponsor(ship)? (is )?available|relocation (support|assistance|package))/i
+
+const HYDERABAD = /\b(hyderabad|secunderabad|hitec city|gachibowli)\b/i
+const INDIA =
+  /\b(india|bengaluru|bangalore|pune|gurugram|gurgaon|chennai|mumbai|noida|new delhi|delhi|ncr|kolkata|ahmedabad|kochi|cochin|trivandrum|thiruvananthapuram|jaipur|chandigarh|coimbatore|indore|mysuru|mysore|vizag|visakhapatnam|bhubaneswar)\b/i
+const REMOTE = /\b(remote|anywhere|work from home|wfh|distributed)\b/i
+const REMOTE_GLOBAL = /\b(anywhere|worldwide|global(ly)?|any (country|timezone|location)|apac|asia)\b/i
+const REMOTE_ELSEWHERE =
+  /\b(us|u\.s\.|usa|united states|canada|uk|united kingdom|europe|eu|emea|americas|latam|north america|germany|france|netherlands|spain|poland|australia|brazil|mexico)\b/i
+
+/** The smallest "N years" of experience a description asks for, if it says. */
+export function minYears(text: string | undefined): number | undefined {
+  if (!text) return undefined
+  let min: number | undefined
+  for (const m of text.matchAll(EXPERIENCE)) {
+    const n = Number(m[1])
+    if (n <= 15 && (min === undefined || n < min)) min = n
+  }
+  return min
+}
+
+export function regionOf(location: string, remote?: boolean): Region | 'remote-elsewhere' {
+  if (HYDERABAD.test(location)) return 'hyderabad'
+  if (INDIA.test(location)) return 'india'
+  if (remote || REMOTE.test(location)) {
+    if (REMOTE_GLOBAL.test(location) || !REMOTE_ELSEWHERE.test(location)) return 'remote'
+    return 'remote-elsewhere'
+  }
+  return 'international'
+}
+
+export function categoryOf(title: string): string {
+  if (
+    /machine learning|\bml\b|\bai\b|artificial intelligence|data scien|deep learning|nlp|computer vision|llm|gen ?ai|applied scien|research (engineer|scientist)/i.test(
+      title,
+    )
+  )
+    return 'ML / AI'
+  if (/data engineer|analytics engineer|big data/i.test(title)) return 'Data'
+  if (/android|ios|mobile|flutter|react native/i.test(title)) return 'Mobile'
+  if (/front[- ]?end|\bui\b|web developer/i.test(title)) return 'Frontend'
+  if (/full[- ]?stack/i.test(title)) return 'Full-stack'
+  if (/devops|\bsre\b|site reliability|infrastructure|platform|cloud|security/i.test(title)) return 'Infra'
+  if (/back[- ]?end|server|distributed|api/i.test(title)) return 'Backend'
+  return 'SDE'
+}
+
+export function classify(p: RawPosting, now = new Date()): Classified {
+  const title = p.title
+  const text = `${title}\n${p.description ?? ''}`
+
+  if (!TECH.test(title) || NOT_TECH.test(title)) return { keep: false, reason: 'not an engineering role' }
+  if (SENIOR.test(title)) return { keep: false, reason: 'senior role' }
+
+  const yearsInTitle = title.match(PAST_INTAKE)
+  if (yearsInTitle && !/2027|2028/.test(title)) return { keep: false, reason: 'past intake' }
+
+  if (p.postedAt && now.getTime() - p.postedAt.getTime() > 45 * 24 * 60 * 60 * 1000) {
+    return { keep: false, reason: 'older than 45 days' }
+  }
+
+  // Level
+  const hint = p.hints?.level ?? ''
+  const years = minYears(p.description)
+  let level: Level
+  if (INTERN.test(title) || /intern/i.test(hint) || /intern/i.test(p.hints?.employmentType ?? '')) level = 'intern'
+  else if (NEW_GRAD.test(title) || /new grad|entry/i.test(hint)) level = 'new-grad'
+  else if (/mid|senior|director|executive/i.test(hint)) return { keep: false, reason: 'senior role' }
+  else if (years !== undefined && years >= 2) return { keep: false, reason: `asks for ${years}+ years` }
+  else if (years !== undefined) level = 'entry'
+  else level = 'unspecified'
+
+  if (level !== 'intern' && years !== undefined && years >= 2)
+    return { keep: false, reason: `asks for ${years}+ years` }
+
+  // Where, and whether the work authorisation rules allow it
+  const flags: string[] = []
+  const where = regionOf(p.location, p.remote)
+  const sponsorHint = p.hints?.sponsorship ?? ''
+  const sponsors = SPONSOR.test(text) || /offers sponsorship/i.test(sponsorHint)
+  const blocks = NO_SPONSOR.test(text) || /does not offer|citizenship/i.test(sponsorHint)
+
+  if (where === 'international' || where === 'remote-elsewhere') {
+    // Internships abroad need enrolment or a visa in that country; a student in India can't take them.
+    if (level === 'intern') return { keep: false, reason: 'internship abroad' }
+    if (!sponsors || blocks) return { keep: false, reason: 'abroad without visa sponsorship' }
+    flags.push('Visa sponsorship offered')
+  } else if (where === 'remote' && blocks) {
+    return { keep: false, reason: 'requires local work authorisation' }
+  }
+  const region: Region = where === 'remote-elsewhere' ? 'international' : where
+
+  if (level === 'unspecified') flags.push('Experience not stated')
+  return { keep: true, level, region, category: categoryOf(title), flags }
+}
