@@ -1,26 +1,90 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/*
+ * Jobber design tokens (docs/DESIGN.md).
+ * Blue and white on a dim, cool-grey canvas. Names map to utilities:
+ * --color-ink-2 → text-ink-2, --color-line → border-line, --shadow-card → shadow-card.
+ */
+@theme {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  --color-canvas: #eef1f6;
+  --color-sunken: #e5e9f0;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f7f9fc;
+  --color-line: #e2e7ef;
+  --color-line-strong: #cbd3df;
+
+  --color-ink: #0f172a;
+  --color-ink-2: #475569;
+  --color-ink-3: #8391a7;
+
+  --color-primary: #2563eb;
+  --color-primary-hover: #1d4ed8;
+  --color-primary-active: #1e40af;
+  --color-primary-tint: #eaf1ff;
+  --color-primary-soft: #dbe7ff;
+  --color-primary-tint-border: #c9daff;
+
+  --color-success: #15803d;
+  --color-success-tint: #e8f6ee;
+  --color-warning: #b45309;
+  --color-warning-tint: #fef4e6;
+  --color-danger: #dc2626;
+  --color-danger-tint: #fdecec;
+
+  --text-caption: 12px;
+  --text-caption--line-height: 16px;
+  --text-small: 13px;
+  --text-small--line-height: 18px;
+  --text-body: 15px;
+  --text-body--line-height: 22px;
+  --text-large: 16px;
+  --text-large--line-height: 24px;
+  --text-title: 17px;
+  --text-title--line-height: 24px;
+  --text-page: 28px;
+  --text-page--line-height: 36px;
+  --text-stat: 34px;
+  --text-stat--line-height: 40px;
+
+  --radius-control: 8px;
+  --radius-button: 9px;
+  --radius-card: 14px;
+  --radius-panel: 16px;
+
+  --shadow-card: 0 1px 2px rgb(15 23 42 / 0.05);
+  --shadow-pop: 0 4px 14px rgb(15 23 42 / 0.08);
+  --shadow-drawer: 0 20px 50px rgb(15 23 42 / 0.18);
+
+  --ease-out-soft: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    background: var(--color-canvas);
+    color: var(--color-ink);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+    font-variant-numeric: tabular-nums;
+  }
+  :focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgb(37 99 235 / 0.35);
+  }
+  body.menu-open {
+    overflow: hidden;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
 }
