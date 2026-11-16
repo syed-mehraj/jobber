@@ -1,4 +1,5 @@
 import 'server-only'
+import { mkdirSync } from 'node:fs'
 import path from 'node:path'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
 import * as schema from './schema'
@@ -28,6 +29,8 @@ async function connect(): Promise<DB> {
   const { drizzle } = await import('drizzle-orm/pglite')
   const { migrate } = await import('drizzle-orm/pglite/migrator')
   const dir = process.env.PGLITE_DIR ?? path.join(process.cwd(), '.data', 'pglite')
+  // PGlite creates its own folder but not the ones above it (.data/ doesn't exist on a fresh checkout).
+  mkdirSync(path.dirname(dir), { recursive: true })
   const db = drizzle(new PGlite(dir), { schema })
   await migrate(db, { migrationsFolder })
   return db as unknown as DB
