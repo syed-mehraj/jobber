@@ -1,0 +1,24 @@
+# dependencies and builds
+node_modules/
+.next/
+out/
+dist/
+coverage/
+*.tsbuildinfo
+
+# secrets: real values live only in .env.local (local) and Vercel project settings
+.env
+.env.*
+!.env.example
+
+# personal exports and uploads never go in the repo
+exports/
+uploads/
+*.pdf
+*.docx
+private/
+
+# logs and OS files
+*.log
+.DS_Store
+.vercel

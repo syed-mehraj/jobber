@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Jobber design preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Source+Serif+4:wght@600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #eef1f6; --bg-sunken: #e5e9f0; --surface: #fff; --surface-muted: #f7f9fc;
+    --border: #e2e7ef; --border-strong: #cbd3df;
+    --text: #0f172a; --text-2: #475569; --text-3: #8391a7;
+    --primary: #2563eb; --primary-hover: #1d4ed8; --primary-active: #1e40af; --primary-tint: #eaf1ff; --primary-tint-border: #c9daff;
+    --ring: rgb(37 99 235 / .35);
+    --success: #15803d; --success-tint: #e8f6ee; --warning: #b45309; --warning-tint: #fef4e6; --danger: #dc2626; --danger-tint: #fdecec;
+    --sh-sm: 0 1px 2px rgb(15 23 42 / .06); --sh-md: 0 4px 14px rgb(15 23 42 / .08); --sh-lg: 0 16px 40px rgb(15 23 42 / .14);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 400 14px/20px Inter, system-ui, sans-serif; font-variant-numeric: tabular-nums; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 32px 16px 80px; }
+  h1 { font-size: 24px; line-height: 32px; font-weight: 600; margin: 0 0 4px; }
+  h2 { font-size: 13px; font-weight: 600; color: var(--text-2); text-transform: none; margin: 40px 0 12px; }
+  p.lead { color: var(--text-2); margin: 0 0 8px; max-width: 70ch; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--sh-sm); padding: 20px; }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .grid { display: grid; gap: 12px; }
+
+  /* swatches */
+  .sw { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  .sw div { border-radius: 10px; overflow: hidden; border: 1px solid var(--border); background: var(--surface); }
+  .sw i { display: block; height: 52px; }
+  .sw span { display: block; padding: 8px 10px; font-size: 12px; color: var(--text-2); }
+  .sw b { display: block; font-weight: 500; color: var(--text); }
+
+  /* buttons */
+  .btn { --h: 36px; display: inline-flex; align-items: center; gap: 8px; height: var(--h); padding: 0 14px; border-radius: 8px; border: 1px solid transparent;
+    font: 500 14px/1 Inter, sans-serif; cursor: pointer; transition: background-color .12s, border-color .12s, color .12s, transform .12s; white-space: nowrap; }
+  .btn:active { transform: translateY(1px); }
+  .btn:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--ring); }
+  .btn svg { width: 16px; height: 16px; }
+  .btn.sm { --h: 32px; padding: 0 12px; font-size: 13px; } .btn.lg { --h: 44px; padding: 0 18px; font-size: 15px; }
+  .primary { background: var(--primary); color: #fff; } .primary:hover { background: var(--primary-hover); } .primary:active { background: var(--primary-active); }
+  .secondary { background: var(--surface); color: var(--text); border-color: var(--border-strong); } .secondary:hover { background: var(--surface-muted); }
+  .subtle { background: var(--primary-tint); color: var(--primary); } .subtle:hover { background: #dce8ff; }
+  .ghost { background: none; color: var(--text-2); } .ghost:hover { background: var(--primary-tint); color: var(--primary); }
+  .danger { background: var(--danger); color: #fff; } .danger:hover { background: #b91c1c; }
+  .link { background: none; color: var(--primary); padding: 0; height: auto; } .link:hover { text-decoration: underline; }
+  .btn[disabled] { opacity: .45; pointer-events: none; }
+  .is-focus { box-shadow: 0 0 0 3px var(--ring); }
+  .spin { width: 14px; height: 14px; border-radius: 50%; border: 2px solid rgb(255 255 255 / .4); border-top-color: #fff; animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .icon-btn { width: 36px; padding: 0; justify-content: center; }
+  .seg { display: inline-flex; padding: 3px; gap: 2px; background: var(--bg-sunken); border-radius: 9px; }
+  .seg button { height: 30px; padding: 0 12px; border: 0; border-radius: 7px; background: none; color: var(--text-2); font: 500 13px Inter, sans-serif; cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: var(--sh-sm); }
+  .split { display: inline-flex; } .split .btn:first-child { border-radius: 8px 0 0 8px; } .split .btn:last-child { border-radius: 0 8px 8px 0; border-left: 1px solid rgb(255 255 255 / .3); padding: 0 10px; }
+  .label-sm { font-size: 12px; color: var(--text-3); width: 84px; }
+
+  /* inputs and badges */
+  .field { display: grid; gap: 6px; min-width: 240px; }
+  .field label { font-size: 13px; font-weight: 500; color: var(--text-2); }
+  .input { height: 36px; border: 1px solid var(--border-strong); border-radius: 8px; padding: 0 12px; font: 14px Inter, sans-serif; color: var(--text); background: #fff; }
+  .input:focus, .input.is-focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--ring); }
+  .input.err { border-color: var(--danger); }
+  .hint { font-size: 12px; color: var(--text-3); } .hint.err { color: var(--danger); }
+  .badge { display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 8px; border-radius: 6px; font-size: 12px; font-weight: 500; }
+  .b-success { background: var(--success-tint); color: var(--success); } .b-primary { background: var(--primary-tint); color: var(--primary); }
+  .b-warning { background: var(--warning-tint); color: var(--warning); } .b-danger { background: var(--danger-tint); color: var(--danger); }
+  .b-neutral { background: var(--bg-sunken); color: var(--text-2); }
+
+  /* app mock */
+  .app { display: grid; grid-template-columns: 220px minmax(0, 1fr); min-height: 560px; border-radius: 14px; overflow: hidden; border: 1px solid var(--border-strong); box-shadow: var(--sh-lg); background: var(--bg); }
+  .side { background: var(--surface); border-right: 1px solid var(--border); padding: 16px 12px; display: flex; flex-direction: column; gap: 2px; }
+  .logo { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 16px; padding: 4px 8px 16px; }
+  .logo i { width: 26px; height: 26px; border-radius: 7px; background: var(--primary); display: grid; place-items: center; color: #fff; font-style: normal; font-size: 13px; }
+  .nav { position: relative; display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 10px; border-radius: 8px; color: var(--text-2); font-weight: 500; }
+  .nav:hover { background: var(--surface-muted); }
+  .nav.on { background: var(--primary-tint); color: var(--primary); }
+  .nav.on::before { content: ""; position: absolute; left: -12px; top: 8px; bottom: 8px; width: 3px; border-radius: 0 3px 3px 0; background: var(--primary); }
+  .nav .n { margin-left: auto; font-size: 12px; color: var(--text-3); } .nav.on .n { color: var(--primary); }
+  .main { padding: 0 24px 24px; }
+  .top { display: flex; align-items: center; gap: 12px; height: 60px; }
+  .top h3 { font-size: 20px; font-weight: 600; margin: 0; }
+  .search { margin-left: auto; display: flex; align-items: center; gap: 8px; height: 34px; width: 240px; padding: 0 10px; border-radius: 8px; background: var(--surface); border: 1px solid var(--border); color: var(--text-3); font-size: 13px; }
+  .kbd { margin-left: auto; font-size: 11px; border: 1px solid var(--border-strong); border-radius: 4px; padding: 0 5px; }
+  .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; box-shadow: var(--sh-sm); }
+  .stat b { display: block; font-size: 28px; line-height: 36px; font-weight: 600; } .stat span { font-size: 13px; color: var(--text-2); }
+  .stat em { font-style: normal; font-size: 12px; color: var(--success); }
+  .two { display: grid; grid-template-columns: 1.1fr 1fr; gap: 12px; margin-top: 12px; }
+  .bar { display: grid; grid-template-columns: 110px 1fr 28px; align-items: center; gap: 10px; font-size: 13px; color: var(--text-2); padding: 6px 0; }
+  .bar i { height: 8px; border-radius: 4px; background: var(--primary); } .bar s { text-decoration: none; text-align: right; color: var(--text); font-weight: 500; }
+  .job { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto auto; gap: 12px; align-items: center; padding: 10px 0; border-top: 1px solid var(--border); }
+  .job:first-of-type { border-top: 0; }
+  .co { width: 34px; height: 34px; border-radius: 8px; background: var(--bg-sunken); display: grid; place-items: center; font-weight: 600; color: var(--text-2); }
+  .job b { display: block; font-weight: 500; } .job small { color: var(--text-3); font-size: 12px; }
+  .card-h { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; } .card-h h4 { margin: 0; font-size: 15px; font-weight: 600; }
+
+  /* editor mock */
+  .ed { display: grid; grid-template-columns: 150px minmax(0, 1fr) minmax(0, 1.05fr); min-height: 520px; border-radius: 14px; overflow: hidden; border: 1px solid var(--border-strong); box-shadow: var(--sh-lg); background: var(--bg); }
+  .ed-bar { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: var(--surface); border-bottom: 1px solid var(--border); }
+  .secs { background: var(--surface); border-right: 1px solid var(--border); padding: 10px 8px; display: grid; align-content: start; gap: 2px; }
+  .form { padding: 16px; display: grid; align-content: start; gap: 12px; }
+  .bul { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: start; }
+  .ta { min-height: 58px; border: 1px solid var(--border-strong); border-radius: 8px; padding: 8px 10px; font-size: 13px; line-height: 19px; background: #fff; }
+  .ta.is-focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--ring); }
+  .pv { background: var(--bg-sunken); padding: 18px; display: grid; justify-items: center; }
+  .page { width: 100%; max-width: 430px; background: #fff; box-shadow: var(--sh-md); border-radius: 3px; padding: 26px 28px; font-size: 10.5px; line-height: 15px; color: #111; }
+  .page h5 { font: 600 17px/22px "Source Serif 4", serif; margin: 0; letter-spacing: .01em; }
+  .page .ct { color: #555; font-size: 9.5px; }
+  .page h6 { font-size: 9.5px; letter-spacing: .08em; margin: 14px 0 6px; padding-bottom: 3px; border-bottom: 1px solid #222; }
+  .page .r { display: flex; justify-content: space-between; font-weight: 600; }
+  .page ul { margin: 4px 0 0 14px; padding: 0; }
+  .page li { margin: 2px 0; }
+  .page .edit { outline: 2px solid var(--primary); outline-offset: 2px; border-radius: 2px; background: var(--primary-tint); }
+  .sync { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--primary); }
+  @media (max-width: 900px) { .app, .ed { grid-template-columns: 1fr; } .side, .secs { display: none; } .stats { grid-template-columns: repeat(2, 1fr); } .two { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Jobber design preview</h1>
+  <p class="lead">Blue and white on a dim, cool-grey canvas. Tokens and components from docs/DESIGN.md, then two key screens. Example content only.</p>
+
+  <h2>Colour</h2>
+  <div class="sw">
+    <div><i style="background:var(--bg)"></i><span><b>bg</b>#EEF1F6 · canvas</span></div>
+    <div><i style="background:var(--surface)"></i><span><b>surface</b>#FFFFFF · cards</span></div>
+    <div><i style="background:var(--surface-muted)"></i><span><b>surface-muted</b>#F7F9FC</span></div>
+    <div><i style="background:var(--primary)"></i><span><b>primary</b>#2563EB</span></div>
+    <div><i style="background:var(--primary-hover)"></i><span><b>primary-hover</b>#1D4ED8</span></div>
+    <div><i style="background:var(--primary-tint)"></i><span><b>primary-tint</b>#EAF1FF</span></div>
+    <div><i style="background:var(--text)"></i><span><b>text</b>#0F172A</span></div>
+    <div><i style="background:var(--text-2)"></i><span><b>text-2</b>#475569</span></div>
+    <div><i style="background:var(--success)"></i><span><b>success</b>#15803D</span></div>
+    <div><i style="background:var(--warning)"></i><span><b>warning</b>#B45309</span></div>
+    <div><i style="background:var(--danger)"></i><span><b>danger</b>#DC2626</span></div>
+    <div><i style="background:var(--border-strong)"></i><span><b>border-strong</b>#CBD3DF</span></div>
+  </div>
+
+  <h2>Buttons</h2>
+  <div class="card grid">
+    <div class="row"><span class="label-sm">Variants</span>
+      <button class="btn primary">Export PDF</button>
+      <button class="btn secondary">Duplicate</button>
+      <button class="btn subtle"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l1.6 4.4L14 7l-4.4 1.6L8 13l-1.6-4.4L2 7l4.4-1.6z"/></svg>Tailor to job</button>
+      <button class="btn ghost">Preview</button>
+      <button class="btn danger">Delete version</button>
+      <button class="btn link">View posting</button>
+    </div>
+    <div class="row"><span class="label-sm">Sizes</span>
+      <button class="btn primary sm">Small 32</button><button class="btn primary">Default 36</button><button class="btn primary lg">Large 44</button>
+    </div>
+    <div class="row"><span class="label-sm">States</span>
+      <button class="btn primary">Default</button>
+      <button class="btn primary" style="background:var(--primary-hover)">Hover</button>
+      <button class="btn primary" style="background:var(--primary-active);transform:translateY(1px)">Pressed</button>
+      <button class="btn primary is-focus">Focus</button>
+      <button class="btn primary" disabled>Disabled</button>
+      <button class="btn primary"><span class="spin"></span>Saving</button>
+    </div>
+    <div class="row"><span class="label-sm">Groups</span>
+      <div class="seg" role="group"><button aria-pressed="false">Form</button><button aria-pressed="true">Split</button><button aria-pressed="false">Preview</button></div>
+      <div class="split"><button class="btn primary">Export PDF</button><button class="btn primary" aria-label="More formats">▾</button></div>
+      <button class="btn secondary icon-btn" aria-label="Undo"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 4L2 7l3 3M2 7h7a4 4 0 010 8H7"/></svg></button>
+      <button class="btn ghost icon-btn" aria-label="More"><svg viewBox="0 0 16 16" fill="currentColor"><circle cx="3" cy="8" r="1.4"/><circle cx="8" cy="8" r="1.4"/><circle cx="13" cy="8" r="1.4"/></svg></button>
+    </div>
+  </div>
+
+  <h2>Inputs and badges</h2>
+  <div class="card row" style="align-items:flex-start;gap:20px">
+    <div class="field"><label>Role</label><input class="input" value="Software Developer" /><span class="hint">As written on your offer letter.</span></div>
+    <div class="field"><label>Company</label><input class="input is-focus" value="Parallel Labs" /><span class="hint">Focused</span></div>
+    <div class="field"><label>Start date</label><input class="input err" value="13/2026" /><span class="hint err">Use MM/YYYY.</span></div>
+    <div class="grid" style="gap:8px">
+      <div class="row"><span class="badge b-success">92 · Strong</span><span class="badge b-primary">74 · Good</span><span class="badge b-warning">52 · Partial</span><span class="badge b-danger">31 · Weak</span></div>
+      <div class="row"><span class="badge b-neutral">Saved</span><span class="badge b-primary">Applied</span><span class="badge b-warning">OA</span><span class="badge b-success">Interview</span><span class="badge b-danger">Rejected</span></div>
+    </div>
+  </div>
+
+  <h2>Dashboard</h2>
+  <div class="app">
+    <aside class="side">
+      <div class="logo"><i>J</i>Jobber</div>
+      <div class="nav on">Dashboard</div>
+      <div class="nav">Resumes <span class="n">4</span></div>
+      <div class="nav">Jobs <span class="n">24</span></div>
+      <div class="nav">Applications <span class="n">9</span></div>
+      <div class="nav">Settings</div>
+    </aside>
+    <section class="main">
+      <div class="top"><h3>Dashboard</h3><span class="hint">Last run today 07:00</span><div class="search">Search <span class="kbd">⌘K</span></div></div>
+      <div class="stats">
+        <div class="stat"><b>24</b><span>New matches</span> <em>+6 today</em></div>
+        <div class="stat"><b>9</b><span>Applied</span></div>
+        <div class="stat"><b>2</b><span>Interviews</span></div>
+        <div class="stat"><b>71</b><span>Average match</span></div>
+      </div>
+      <div class="two">
+        <div class="card">
+          <div class="card-h"><h4>Jobs by category</h4><button class="btn ghost sm">View all</button></div>
+          <div class="bar">SDE intern<i style="width:100%"></i><s>12</s></div>
+          <div class="bar">ML / AI intern<i style="width:58%"></i><s>7</s></div>
+          <div class="bar">New-grad SDE<i style="width:33%"></i><s>4</s></div>
+          <div class="bar">Data<i style="width:9%"></i><s>1</s></div>
+        </div>
+        <div class="card">
+          <div class="card-h"><h4>Today's top matches</h4><span class="hint">Example data</span></div>
+          <div class="job"><span class="co">G</span><span><b>Software Engineering Intern</b><small>Example Co A · Hyderabad · 2d</small></span><span class="badge b-success">92</span><button class="btn primary sm">Apply</button></div>
+          <div class="job"><span class="co">A</span><span><b>Graduate SDE</b><small>Example Co B · Bengaluru · 1d</small></span><span class="badge b-success">88</span><button class="btn primary sm">Apply</button></div>
+          <div class="job"><span class="co">R</span><span><b>ML Engineer Intern</b><small>Example Co C · Remote · 3d</small></span><span class="badge b-primary">76</span><button class="btn primary sm">Apply</button></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <h2>Resume editor: both sides stay in sync</h2>
+  <div class="ed">
+    <div class="ed-bar">
+      <strong style="font-weight:600">Backend SDE</strong><span class="badge b-neutral">Version</span>
+      <span class="sync">● Saved</span>
+      <div class="seg" style="margin-left:auto"><button aria-pressed="false">Form</button><button aria-pressed="true">Split</button><button aria-pressed="false">Preview</button></div>
+      <button class="btn subtle sm">Tailor to job</button>
+      <div class="split"><button class="btn primary sm">Export PDF</button><button class="btn primary sm" aria-label="More formats">▾</button></div>
+    </div>
+    <nav class="secs">
+      <div class="nav">Contact</div><div class="nav">Summary</div><div class="nav on">Experience</div><div class="nav">Projects</div><div class="nav">Education</div><div class="nav">Skills</div>
+      <button class="btn ghost sm" style="justify-content:flex-start">+ Add section</button>
+    </nav>
+    <div class="form">
+      <div class="card" style="padding:16px;display:grid;gap:12px">
+        <div class="row" style="gap:12px"><div class="field" style="min-width:0;flex:1"><label>Company</label><input class="input" value="Parallel Labs" /></div><div class="field" style="min-width:0;flex:1"><label>Role</label><input class="input" value="Role to confirm" /></div></div>
+        <div class="field" style="min-width:0"><label>Bullets</label>
+          <div class="bul"><div class="ta is-focus">Moved order wording into the conversation engine, so the model reads exact lines instead of improvising on a live order.</div><button class="btn subtle sm">Improve</button></div>
+          <div class="bul"><div class="ta">Added a stuck-call watchdog that hands the caller to a person if a reply stalls.</div><button class="btn ghost sm">Improve</button></div>
+        </div>
+        <button class="btn secondary sm" style="justify-self:start">+ Add bullet</button>
+      </div>
+    </div>
+    <div class="pv">
+      <div class="page">
+        <h5>SYED MEHRAJ UR RAHMAN</h5>
+        <div class="ct">Hyderabad · email · GitHub</div>
+        <h6>EXPERIENCE</h6>
+        <div class="r"><span>Parallel Labs</span><span>2026 – present</span></div>
+        <ul>
+          <li><span class="edit">Moved order wording into the conversation engine, so the model reads exact lines instead of improvising on a live order.</span></li>
+          <li>Added a stuck-call watchdog that hands the caller to a person if a reply stalls.</li>
+        </ul>
+        <h6>PROJECTS</h6>
+        <div class="r"><span>Steady · NestJS microservices</span><span>2026</span></div>
+        <ul><li>Six services with Prisma, PostgreSQL and Redis Streams behind one gateway.</li></ul>
+        <h6>EDUCATION</h6>
+        <div class="r"><span>MJCET, Osmania University</span><span>2023 – 2027</span></div>
+        <div>B.E. in Artificial Intelligence and Machine Learning · CGPA 9.0</div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
