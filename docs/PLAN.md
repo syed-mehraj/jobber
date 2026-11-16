@@ -53,13 +53,13 @@ The UI is specified in [DESIGN.md](DESIGN.md): blue and white on a dim backgroun
 
 ## Phase 1: Design system in code
 
-**1.1 Tokens:** the colours, type scale, radii, shadows and motion from DESIGN.md as CSS variables and Tailwind theme values. Inter loaded with `next/font`.
+**1.1 Tokens (done):** the colours, type scale, radii, shadows and motion from DESIGN.md as CSS variables and Tailwind theme values. Inter loaded with `next/font`.
 
-**1.2 Components:** Button (6 variants × 3 sizes, every state), IconButton, Input, Textarea, Select, Badge, ScoreBadge, Card, Tabs, SegmentedControl, Dialog, Drawer, Toast, Tooltip, Skeleton, EmptyState.
+**1.2 Components (done for what the pages use):** Button (6 variants × 3 sizes, every state), icon buttons, Input, Badge, ScoreBadge, Card, Skeleton, EmptyState. Textarea, Select, Tabs, SegmentedControl, Dialog, Toast and Tooltip are built with the screens that first need them (editor, jobs).
 
-**1.3 App shell:** the header (Dashboard, Resumes, Jobs, New resume, ☰), the menu slider for everything else, the page container, and the phone layout.
+**1.3 App shell (done):** the header (Dashboard, Resumes, Jobs, New resume, ☰), the menu slider for everything else, the page container, and the phone layout.
 
-**1.4 Style guide page:** a `/styleguide` route showing every component and state.
+**1.4 Style guide page (done):** a `/styleguide` route showing every component and state.
 - Done when: it matches DESIGN.md and keyboard focus is visible everywhere.
 
 ## Phase 2: Data and access
@@ -173,7 +173,7 @@ Settings has a "Send test message" button.
 
 **9.1 Tracker:** a kanban (Saved → Applied → OA → Interview → Offer / Rejected), notes, dates, and the resume version used.
 
-**9.2 Dashboard:** built to [DASHBOARD.md](DASHBOARD.md): a greeting, three numbers and today's five best matches.
+**9.2 Dashboard:** built to [DASHBOARD.md](DASHBOARD.md): a greeting, three numbers and today's five best matches. The page and the Apply → "Did you apply?" flow already exist on sample data; this step wires them to the database.
 
 **9.3 Polish:**
 - empty states and loading skeletons

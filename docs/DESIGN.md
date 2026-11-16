@@ -6,6 +6,8 @@ Blue and white on a dim, cool-grey background. Calm, dense enough for real work,
 
 ## 1. Colour
 
+In code the tokens live in `src/app/globals.css`. Tailwind names: `bg` → `canvas`, `bg-sunken` → `sunken`, `border` → `line`, `border-strong` → `line-strong`, `text`, `text-2`, `text-3` → `ink`, `ink-2`, `ink-3`; the rest keep their names (`bg-primary-tint`, `text-success`).
+
 | Token | Value | Use |
 |---|---|---|
 | `bg` | `#EEF1F6` | the dim page background behind the white cards |
@@ -34,14 +36,14 @@ Contrast: `text` on `surface` 17:1, `text-2` 7.4:1, `text-3` 3.4:1 (hints only, 
 ## 2. Type
 
 - **UI:** Inter, with tabular numbers for scores, counts and dates.
-- **Scale (px / line height):** 12/16 caption, 13/18 small, 14/20 body, 16/24 large body, 18/26 card title, 20/28 section title, 24/32 page title, 30/38 dashboard numbers.
+- **Scale (px / line height):** 12/16 caption, 13/18 small, 15/22 body, 16/24 large body, 17/24 card title, 28/36 page title (24/32 on phones), 34/40 dashboard numbers (26/32 on phones).
 - **Weights:** 400 body, 500 labels and buttons, 600 titles. No bold body text.
 - **Resume templates** have their own fonts (see §6), separate from the app UI.
 
 ## 3. Space, shape, depth
 
 - 4px grid. Common steps: 4, 8, 12, 16, 20, 24, 32, 40.
-- Radius: 6 (badges, small controls), 8 (buttons, inputs), 12 (cards), 16 (modals, drawers).
+- Radius: 8 (small buttons, inputs), 9 (buttons), 14 (cards), 16 (modals, drawers); badges are pills.
 - Shadows, used sparingly on white over the dim canvas:
   - `sm` `0 1px 2px rgb(15 23 42 / .06)`: cards
   - `md` `0 4px 14px rgb(15 23 42 / .08)`: dropdowns, hovered cards
@@ -59,8 +61,8 @@ Contrast: `text` on `surface` 17:1, `text-2` 7.4:1, `text-3` 3.4:1 (hints only, 
 | Danger | solid `danger`, white text | only inside a confirm dialog |
 | Link | `primary` text, underline on hover | inline navigation |
 
-- **Sizes:** sm 32px (tables, toolbars), md 36px (default), lg 44px (login, empty-state call to action). Horizontal padding 12 / 14 / 18px. Icons 16px with an 8px gap.
-- **Icon buttons:** square 32 or 36px, always with a tooltip and an `aria-label`.
+- **Sizes:** sm 32px (tables, toolbars), md 38px (default), lg 44px (login, empty-state call to action). Horizontal padding 12 / 14 / 18px. Icons 16px with an 8px gap.
+- **Icon buttons:** square 32 or 38px, always with a tooltip and an `aria-label`.
 - **States:** hover darkens one step; pressed darkens two and moves 1px down; keyboard focus adds the 3px `focus-ring`; disabled is 45% opacity with no hover; loading swaps the icon for a spinner, keeps the width and blocks clicks.
 - **Groups:** a segmented control for view switches (Grid / List, Form / Split / Preview); a split button for Export (PDF ▾ DOCX).
 - **Rule:** at most one primary button per view or dialog.
