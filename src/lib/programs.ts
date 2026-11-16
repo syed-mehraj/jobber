@@ -110,6 +110,13 @@ export const platforms: Platform[] = [
     verdict: 'check',
   },
   {
+    name: 'Career sites the app can’t read',
+    url: 'https://www.amazon.jobs/en/search?base_query=software&country=IND',
+    why: 'These companies hire through systems without a public feed (Workday, their own sites, Darwinbox, TurboHire…): Amazon, Google, Microsoft, Apple, Atlassian, Adobe, Nvidia, Salesforce, PayPal, Uber, Flipkart, PhonePe, Zerodha, Postman, Zoho, Rippling, BrowserStack, Sprinklr.',
+    how: 'Save a search for "intern" or "new grad" in India on each site and turn on its email alerts.',
+    verdict: 'check',
+  },
+  {
     name: 'Wellfound',
     url: 'https://wellfound.com/jobs',
     why: 'Startup roles with salary shown and direct messages to the team. Wellfound’s own analysis puts its interview rate at about 6%, twice LinkedIn’s (vendor claim).',

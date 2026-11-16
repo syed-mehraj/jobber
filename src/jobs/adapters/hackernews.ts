@@ -24,6 +24,10 @@ export const hackernews: Adapter = async () => {
         .split('|')
         .map((s) => s.trim())
         .filter(Boolean)
+      const isRole = (t: string) =>
+        /engineer|developer|intern|scientist|\bml\b|\bai\b|\bswe\b|\bsde\b|graduate|designer|manager/i.test(t)
+      // Most posts are "Company | Role | Location"; some put the role first.
+      if (parts.length > 1 && isRole(parts[0]) && !isRole(parts[1])) [parts[0], parts[1]] = [parts[1], parts[0]]
       const company = (parts[0] ?? 'Unknown')
         .replace(/\(.*?\)/g, '')
         .trim()
@@ -47,6 +51,7 @@ export const hackernews: Adapter = async () => {
         postedAt: toDate(c.created_at),
         description: text,
         remote: /remote/i.test(first),
+        hints: { strictLevel: true },
       }
     })
 }

@@ -2,12 +2,13 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { buttonClass, iconButtonClass } from '@/components/ui/button'
 import { MenuIcon, PlusIcon } from '@/components/ui/icons'
 import { cx } from '@/lib/cx'
 import { Brand } from './brand'
 import { MenuDrawer } from './menu-drawer'
+import { useMenuState } from './menu-state'
 import { headerLinks, isActive } from './nav'
 import type { ShellActions, ShellData, User } from './types'
 
@@ -16,12 +17,18 @@ type Props = { user: User; data: ShellData; actions: ShellActions }
 /** The header holds only what's needed; everything else is in the menu slider. */
 export function AppHeader({ user, data, actions }: Props) {
   const pathname = usePathname()
-  const [open, setOpen] = useState(false)
+  const { open, setOpen } = useMenuState()
   const menuButton = useRef<HTMLButtonElement>(null)
 
   const close = useCallback(() => {
     setOpen(false)
     menuButton.current?.focus()
+  }, [setOpen])
+
+  // If the header is swapped in while the menu is open (counts arriving), keep focus inside the menu.
+  useEffect(() => {
+    if (open) document.querySelector<HTMLElement>('#app-menu button[aria-label="Close menu"]')?.focus()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   return (

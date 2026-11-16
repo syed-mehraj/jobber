@@ -14,7 +14,9 @@ Only sources that publish a public feed meant for this use. Each is read again w
 | **Hacker News "Who is hiring?"** | Founders and CTOs post directly; little spam. Low volume for India (about 10 of 372 posts in Nov 2026). | Official Algolia HN API |
 | **SimplifyJobs** new-grad and internship lists, **vanshb03** internship list | Updated many times a day, with a sponsorship field. Almost entirely US roles, so the filters keep very few. | Raw `listings.json` in public GitHub repos |
 
-The company list is in `src/jobs/catalog.ts`; its health is on Settings → Companies and sources.
+The company list is in `src/jobs/catalog.ts` (60 boards, verified 16 Nov 2026); its health is on Settings → Companies and sources. Greenhouse boards are listed without descriptions first, and descriptions are downloaded only for roles that could pass the filters.
+
+Companies checked but not readable here (no board on these four systems): Amazon, Microsoft, Google, Apple, Meta, Uber, Atlassian (iCIMS); Adobe, Nvidia, Salesforce, PayPal, Mastercard, Visa, Intel, BrowserStack, Sprinklr (Workday); Flipkart, Ola, Setu (TurboHire); Rapido, Spinny (Darwinbox); Plum, SaaS Labs, Cashfree (Kula); Zoho, Rippling, PhonePe, Zerodha, Postman, Chargebee, CleverTap. Set email alerts on their career sites instead.
 
 ## Not read automatically, and why
 

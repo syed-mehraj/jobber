@@ -10,7 +10,7 @@ export type RawPosting = {
   description?: string
   remote?: boolean
   /** Hints a source gives directly, e.g. SmartRecruiters' experience level or Simplify's sponsorship field. */
-  hints?: { level?: string; sponsorship?: string; employmentType?: string }
+  hints?: { level?: string; sponsorship?: string; employmentType?: string; strictLevel?: boolean }
 }
 
 export type SourceConfig = Record<string, string>

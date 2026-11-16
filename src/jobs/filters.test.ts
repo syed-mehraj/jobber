@@ -93,3 +93,64 @@ describe('helpers', () => {
     expect(regionOf('London, UK')).toBe('international')
   })
 })
+
+describe('worthDetail', () => {
+  it('fetches descriptions only for roles that could pass', async () => {
+    const { worthDetail } = await import('./filters')
+    expect(worthDetail({ title: 'Software Engineer', location: 'Bengaluru' })).toBe(true)
+    expect(worthDetail({ title: 'New Grad Engineer', location: 'Dublin, Ireland' })).toBe(true)
+    expect(worthDetail({ title: 'Software Engineering Intern', location: 'Dublin, Ireland' })).toBe(false)
+    expect(worthDetail({ title: 'Senior Software Engineer', location: 'Bengaluru' })).toBe(false)
+    expect(worthDetail({ title: 'Account Executive', location: 'Hyderabad' })).toBe(false)
+  })
+})
+
+describe('tightened rules (from the first live run)', () => {
+  it('drops experienced hires abroad even with sponsorship text', () => {
+    expect(
+      classify(
+        p('Full Stack Software Engineer', 'San Francisco', { description: 'We offer relocation support.' }),
+        now,
+      ),
+    ).toMatchObject({ keep: false, reason: 'abroad, level not stated' })
+  })
+  it('does not treat a remote flag on foreign cities as open to India', () => {
+    expect(
+      classify(
+        p('Software Engineering Intern, Frontend', 'New York, New York; San Francisco, California', { remote: true }),
+        now,
+      ),
+    ).toMatchObject({ keep: false })
+    expect(regionOf('REMOTE (EEA)')).toBe('remote-elsewhere')
+    expect(regionOf('Remote', true)).toBe('remote')
+    expect(regionOf('100% Remote (Global)')).toBe('remote')
+  })
+  it('catches other senior and non-target wording', () => {
+    expect(classify(p('Dir, Software Engrg Mgmt', 'Hyderabad'), now)).toMatchObject({ keep: false })
+    expect(classify(p('Intermediate Backend Engineer'), now)).toMatchObject({ keep: false })
+    expect(classify(p('Professional Services Engineer'), now)).toMatchObject({ keep: false })
+  })
+  it('requires an explicit level for strict sources and drops closed posts', () => {
+    const hn = (title: string, description: string) => p(title, 'Remote', { description, hints: { strictLevel: true } })
+    expect(classify(hn('Backend Engineer', 'We build databases. Python.'), now)).toMatchObject({
+      keep: false,
+      reason: 'level not stated',
+    })
+    expect(classify(hn('Backend Engineer', 'Hiring junior engineers, remote worldwide.'), now)).toMatchObject({
+      keep: true,
+      level: 'new-grad',
+    })
+    expect(classify(hn('ML Engineer', 'Interns welcome. UPDATE: no longer taking applications'), now)).toMatchObject({
+      keep: false,
+      reason: 'closed',
+    })
+  })
+})
+
+describe('more wording', () => {
+  it('drops admin and people-systems roles, and reads "Engineer - I" as entry', () => {
+    expect(classify(p('AI Tool Admin'), now)).toMatchObject({ keep: false })
+    expect(classify(p('People Systems Engineer'), now)).toMatchObject({ keep: false })
+    expect(classify(p('Devops Engineer - I', 'Gurugram'), now)).toMatchObject({ keep: true, level: 'new-grad' })
+  })
+})

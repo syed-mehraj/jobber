@@ -12,7 +12,10 @@ The UI is specified in [DESIGN.md](DESIGN.md): blue and white on a dim backgroun
 
 | Topic | Decision |
 |---|---|
-| Hosting | Vercel, private and password-protected; Postgres on Neon (free tier); Vercel Cron for the daily run |
+| Hosting | Vercel, private and password-protected; Postgres on Neon (free tier) in production, PGlite locally; Vercel Cron for the daily run |
+| Database access | Drizzle ORM (works with PGlite and Neon alike; replaces the earlier Prisma plan) |
+| Freshness | A search runs whenever the app is opened and the last one is over 10 minutes old, plus Run search now and a daily cron |
+| Sources | Only public feeds: Greenhouse, Lever, Ashby, SmartRecruiters, HN, GitHub lists. Everything else is linked on the Programs page. See [SOURCES.md](SOURCES.md) |
 | Alerts | Telegram bot, a morning digest |
 | Locations | Hyderabad; Bengaluru, Pune, Gurugram, Chennai, Mumbai, Noida; remote (India-eligible); international |
 | International roles | Kept, but checked: "must already be authorized to work" is dropped, "sponsorship available" is flagged |
@@ -32,7 +35,7 @@ The UI is specified in [DESIGN.md](DESIGN.md): blue and white on a dim backgroun
 
 - Real secrets live only in `.env.local` (git-ignored) and in Vercel's environment settings. `.env.example` lists names, never values.
 - Nothing is sent to the browser except what the page needs. The Gemini key, the Telegram token and the database URL are server-only (no `NEXT_PUBLIC_` prefix).
-- The app sits behind a password: a bcrypt hash in an environment variable, with an httpOnly, secure session cookie. Vercel Deployment Protection is on for previews.
+- The app sits behind a password: a scrypt hash in an environment variable (set with `npm run set-password`), with a signed httpOnly, secure session cookie. Vercel Deployment Protection is on for previews.
 - The cron endpoint requires `CRON_SECRET`. The Telegram bot only ever messages one chat ID.
 - Resume content lives in the database, not the repo. The seed file holds only details already public on the portfolio (name, email, GitHub, education, projects). No phone number or address goes in the repo.
 - Logs never print keys, tokens or full resumes.
@@ -64,15 +67,15 @@ The UI is specified in [DESIGN.md](DESIGN.md): blue and white on a dim backgroun
 
 ## Phase 2: Data and access
 
-**2.1 Database:** Prisma with these tables:
+**2.1 Database (done):** Drizzle with these tables (Resume versions and snapshots arrive with the editor):
 - `Resume`: master content as JSON
 - `ResumeVersion`: selection, order and overrides
 - `VersionSnapshot`: history
 - `Job`, `JobScore`, `Company`, `Source`, `Application`, `Run`, `Setting`
 
-**2.2 Login:** the password page, a session cookie, and middleware that protects every route except `/login` and the cron endpoint, which needs its own secret.
+**2.2 Login (done):** the password page, a signed session cookie, and `src/proxy.ts` protecting every route except `/login` and the cron endpoint (which needs `CRON_SECRET`). Every data read and action checks the session too.
 
-**2.3 Seed:** the master resume, built only from real work:
+**2.3 Seed (next):** the master resume, built only from real work:
 - Parallel Labs / Parcera: the voice ordering agent
 - Steady: the NestJS microservices and the Expo / Kotlin app
 - the portfolio
@@ -129,15 +132,16 @@ Unverified numbers or dates are marked `TODO` for Syed to fill in.
 
 ## Phase 7: Job search
 
-**7.1 Sources:** one adapter per source, each returning a common `JobPosting` shape:
-- Greenhouse, Lever, Ashby and Workday boards
-- Google, Amazon, Microsoft and Apple career search
+**7.1 Sources (done):** one adapter per source, each returning a common `RawPosting` shape:
+- Greenhouse, Lever, Ashby and SmartRecruiters boards
+- Hacker News "Who is hiring" and the SimplifyJobs / vanshb03 GitHub lists
+- Workday and the big-tech search pages have no public feed, so they are not read (see SOURCES.md)
 
 Each adapter has its own test against a recorded sample. A failing source never stops the others.
 
-**7.2 Companies:** about 40 product companies, each mapped to its source, editable in Settings.
+**7.2 Companies (done):** about 40 product companies, each mapped to its source, editable in Settings.
 
-**7.3 Hard filters (no AI):**
+**7.3 Hard filters, no AI (done):**
 - level: internship, new grad 2027, or 0–1 years
 - location: the list above
 - work authorization rules
@@ -150,9 +154,9 @@ Each adapter has its own test against a recorded sample. A failing source never 
 - score against each resume version, with fit reasons, gaps and the best version
 - cap the batch size and cost per run
 
-**7.5 Link check:** fetch every apply URL; drop anything that is gone or closed.
+**7.5 Link check (done differently):** postings that disappear from their board are marked closed on the next search.
 
-**7.6 Jobs page:** filters, a list, a detail drawer, "Tailor a version", and Apply (opens the company's own page and marks it Applied, with a confirmation).
+**7.6 Jobs page (done, except the detail drawer and Tailor):** filters, a list, a detail drawer, "Tailor a version", and Apply (opens the company's own page and marks it Applied, with a confirmation).
 - Done when: a manual run on production fills the Jobs page with real, live postings.
 
 ## Phase 8: Daily run and alerts
@@ -171,9 +175,9 @@ Settings has a "Send test message" button.
 
 ## Phase 9: Applications and dashboard
 
-**9.1 Tracker:** a kanban (Saved → Applied → OA → Interview → Offer / Rejected), notes, dates, and the resume version used.
+**9.1 Tracker (list with stages done; kanban later):** a kanban (Saved → Applied → OA → Interview → Offer / Rejected), notes, dates, and the resume version used.
 
-**9.2 Dashboard:** built to [DASHBOARD.md](DASHBOARD.md): a greeting, three numbers and today's five best matches. The page and the Apply → "Did you apply?" flow already exist on sample data; this step wires them to the database.
+**9.2 Dashboard (done):** built to [DASHBOARD.md](DASHBOARD.md), on real data.
 
 **9.3 Polish:**
 - empty states and loading skeletons

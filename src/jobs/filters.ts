@@ -15,12 +15,12 @@ export type Classified =
 const TECH =
   /\b(software|sde|swe|developer|engineer(ing)?|programmer|machine learning|ml|ai|data scien\w*|research scien\w*|applied scien\w*|data engineer|full[- ]?stack|back[- ]?end|front[- ]?end|devops|sre|android|ios|mobile)\b/i
 const NOT_TECH =
-  /\b(sales|account (executive|manager)|marketing|recruit\w*|talent|legal|counsel|finance|accountant|payroll|hr|human resources|customer|support|success|solutions? (engineer|consultant|architect)|pre-?sales|field|business|operations|program manager|product manager|project manager|designer|design|content|writer|mechanical|civil|electrical|hardware|analog|asic|rtl|rf|silicon|physical design|verification|manufacturing|quality assurance technician|technician|construction|nurse|clinical|pharma\w*|teacher|tutor)\b/i
+  /\b(sales|account (executive|manager)|marketing|recruit\w*|talent|legal|counsel|finance|accountant|payroll|hr|human resources|customer|support|success|solutions? (engineer|consultant|architect)|pre-?sales|field|business|operations|program manager|product manager|project manager|designer|design|content|writer|mechanical|civil|electrical|hardware|analog|asic|rtl|rf|silicon|physical design|verification|manufacturing|quality assurance technician|technician|construction|nurse|clinical|pharma\w*|teacher|tutor|professional services|implementation|consultant|salesforce|sap|servicenow developer|admin|administrator|people systems|it support|helpdesk)\b/i
 const SENIOR =
-  /\b(senior|sr\.?|staff|principal|lead|leader|manager|director|head|architect|vp|vice president|chief|distinguished|expert|specialist ii|(engineer|developer|sde|swe|scientist)\s*(ii|iii|iv|2|3|4)|(ii|iii|iv)$|l[4-9]|e[4-9]|mts\s*(2|3|ii|iii)|smts|lmts|pmts)\b/i
+  /\b(senior|sr\.?|staff|principal|lead|leader|manager|mgr|mgmt|management|director|dir\.?|head|intermediate|mid[- ]?level|experienced|architect|vp|vice president|chief|distinguished|expert|specialist ii|(engineer|developer|sde|swe|scientist)\s*(ii|iii|iv|2|3|4)|(ii|iii|iv)$|l[4-9]|e[4-9]|mts\s*(2|3|ii|iii)|smts|lmts|pmts)\b/i
 const INTERN = /\b(intern(ship)?|co-?op|apprentice(ship)?|trainee|summer analyst|industrial training)\b/i
 const NEW_GRAD =
-  /\b(new grad\w*|graduate|university|campus|early career|entry[- ]level|fresher|freshers|junior|jr\.?|associate (software|engineer|developer)|(sde|swe|engineer|developer)\s*(i|1)\b|level 1|grad(uate)? program|class of 2027|2027)\b/i
+  /\b(new grad\w*|graduate|university|campus|early career|entry[- ]level|fresher|freshers|junior|jr\.?|associate (software|engineer|developer)|(sde|swe|engineer|developer)\s*[-–]?\s*(i|1)\b|level 1|grad(uate)? program|class of 2027|2027)\b/i
 const PAST_INTAKE = /\b20(1\d|2[0-6])\b/
 const EXPERIENCE =
   /(\d{1,2})\s*(?:\+|plus)?\s*(?:-|–|to)?\s*(?:\d{1,2})?\s*\+?\s*years?(?:'|’)?\s*(?:of)?\s*(?:\w+\s){0,4}?(?:experience|exp\b)/gi
@@ -35,7 +35,15 @@ const INDIA =
 const REMOTE = /\b(remote|anywhere|work from home|wfh|distributed)\b/i
 const REMOTE_GLOBAL = /\b(anywhere|worldwide|global(ly)?|any (country|timezone|location)|apac|asia)\b/i
 const REMOTE_ELSEWHERE =
-  /\b(us|u\.s\.|usa|united states|canada|uk|united kingdom|europe|eu|emea|americas|latam|north america|germany|france|netherlands|spain|poland|australia|brazil|mexico)\b/i
+  /\b(us|u\.s\.|usa|united states|canada|uk|united kingdom|europe|eu|eea|emea|americas|latam|north america|germany|france|netherlands|spain|poland|australia|brazil|mexico|est|pst|cet|pt|et|us hours|us time\w*)\b/i
+/** What's left of a location once remote words and punctuation are removed: empty means "Remote" with no place. */
+const placeLeft = (location: string) =>
+  location
+    .replace(
+      /\b(remote|fully|100%|work from home|wfh|distributed|hybrid|onsite|on-site|not stated|first|friendly|only)\b/gi,
+      '',
+    )
+    .replace(/[\s,;:()\-–|/%]+/g, '')
 
 /** The smallest "N years" of experience a description asks for, if it says. */
 export function minYears(text: string | undefined): number | undefined {
@@ -52,7 +60,9 @@ export function regionOf(location: string, remote?: boolean): Region | 'remote-e
   if (HYDERABAD.test(location)) return 'hyderabad'
   if (INDIA.test(location)) return 'india'
   if (remote || REMOTE.test(location)) {
-    if (REMOTE_GLOBAL.test(location) || !REMOTE_ELSEWHERE.test(location)) return 'remote'
+    if (REMOTE_GLOBAL.test(location)) return 'remote'
+    // "Remote" on its own is open; "Remote, Canada" or a remote flag on "New York; San Francisco" is not.
+    if (!REMOTE_ELSEWHERE.test(location) && placeLeft(location) === '') return 'remote'
     return 'remote-elsewhere'
   }
   return 'international'
@@ -99,6 +109,17 @@ export function classify(p: RawPosting, now = new Date()): Classified {
   else if (years !== undefined) level = 'entry'
   else level = 'unspecified'
 
+  // Sources full of senior roles (HN) must say intern / junior / new grad somewhere.
+  if (p.hints?.strictLevel) {
+    if (level === 'unspecified' || level === 'entry') {
+      if (/\b(intern(ship)?s?)\b/i.test(text)) level = 'intern'
+      else if (/\b(new grads?|junior|entry[- ]level|fresh(er|ers| grad\w*))\b/i.test(text)) level = 'new-grad'
+      else return { keep: false, reason: 'level not stated' }
+    }
+    if (/no longer (taking|accepting)|position (has been )?filled|\bfilled\b|\bclosed\b/i.test(text))
+      return { keep: false, reason: 'closed' }
+  }
+
   if (level !== 'intern' && years !== undefined && years >= 2)
     return { keep: false, reason: `asks for ${years}+ years` }
 
@@ -112,6 +133,8 @@ export function classify(p: RawPosting, now = new Date()): Classified {
   if (where === 'international' || where === 'remote-elsewhere') {
     // Internships abroad need enrolment or a visa in that country; a student in India can't take them.
     if (level === 'intern') return { keep: false, reason: 'internship abroad' }
+    // Abroad, only roles clearly for new graduates; experienced hires abroad aren't realistic.
+    if (level === 'unspecified') return { keep: false, reason: 'abroad, level not stated' }
     if (!sponsors || blocks) return { keep: false, reason: 'abroad without visa sponsorship' }
     flags.push('Visa sponsorship offered')
   } else if (where === 'remote' && blocks) {
@@ -121,4 +144,18 @@ export function classify(p: RawPosting, now = new Date()): Classified {
 
   if (level === 'unspecified') flags.push('Experience not stated')
   return { keep: true, level, region, category: categoryOf(title), flags }
+}
+
+/**
+ * Cheap check on title and location only, before downloading a description.
+ * True when the posting could still pass `classify` once its description is known.
+ */
+export function worthDetail(p: Pick<RawPosting, 'title' | 'location' | 'remote'>): boolean {
+  const title = p.title
+  if (!TECH.test(title) || NOT_TECH.test(title) || SENIOR.test(title)) return false
+  const yearsInTitle = title.match(PAST_INTAKE)
+  if (yearsInTitle && !/2027|2028/.test(title)) return false
+  const where = regionOf(p.location, p.remote)
+  if (where === 'international' || where === 'remote-elsewhere') return !INTERN.test(title) && NEW_GRAD.test(title)
+  return true
 }
