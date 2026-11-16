@@ -1,6 +1,7 @@
 import { Suspense } from 'react'
 import { signOut } from '@/app/login/actions'
 import { AppHeader } from '@/components/shell/app-header'
+import { HeaderShell } from '@/components/shell/header-shell'
 import { MenuStateProvider } from '@/components/shell/menu-state'
 import type { ShellActions, ShellData } from '@/components/shell/types'
 import { getCounts, getSearchStatus } from '@/lib/data'
@@ -15,8 +16,10 @@ export default function AppLayout({ children }: LayoutProps<'/'>) {
   return (
     <>
       <MenuStateProvider>
-        <Suspense fallback={<AppHeader user={owner} data={loading} actions={actions} />}>
-          <HeaderWithData />
+        <Suspense fallback={<HeaderShell />}>
+          <Suspense fallback={<AppHeader user={owner} data={loading} actions={actions} />}>
+            <HeaderWithData />
+          </Suspense>
         </Suspense>
       </MenuStateProvider>
       <main className="mx-auto max-w-[1160px] px-4 pt-7 pb-16 sm:px-5 sm:pt-9">{children}</main>
