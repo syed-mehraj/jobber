@@ -14,7 +14,7 @@ Only sources that publish a public feed meant for this use. Each is read again w
 | **Hacker News "Who is hiring?"** | Founders and CTOs post directly; little spam. Low volume for India (about 10 of 372 posts in Nov 2026). | Official Algolia HN API |
 | **SimplifyJobs** new-grad and internship lists, **vanshb03** internship list | Updated many times a day, with a sponsorship field. Almost entirely US roles, so the filters keep very few. | Raw `listings.json` in public GitHub repos |
 
-The company list is in `src/jobs/catalog.ts` (60 boards, verified 16 Nov 2026); its health is on Settings → Companies and sources. Greenhouse boards are listed without descriptions first, and descriptions are downloaded only for roles that could pass the filters.
+The company list is in `src/jobs/catalog.ts` (130 boards, verified 16 Nov 2026; 109 had India roles that day); its health is on Settings → Companies and sources. Greenhouse boards are listed without descriptions first, and descriptions are downloaded only for roles that could pass the filters.
 
 ## Read unofficially (owner's choice, 16 Nov 2026)
 
@@ -25,7 +25,7 @@ Big-tech careers sites publish no feed. At the owner's request the app reads the
 | Amazon | amazon.jobs search JSON, India only, 5 searches | 572 postings, 12 kept |
 | Google | Google Careers results page data, India, early-career and intern | 29 postings, 2 kept |
 | Microsoft | apply.careers.microsoft.com search JSON (Eightfold), India, 3 searches × 3 pages, 1.5 s apart | rate-limited (HTTP 429) on the first, faster version; slowed down |
-| Netflix | explore.jobs.netflix.net jobs JSON (Eightfold), India | 10 postings, 0 kept |
+| Netflix | explore.jobs.netflix.net jobs JSON (Eightfold), India | 10 postings, 0 kept; later rate-limited (429) along with Microsoft, both on Eightfold |
 
 Not read even unofficially: Flipkart (TurboHire requires fetching an access token, a deliberate gate), the Workday sites (Adobe, Nvidia, Salesforce, PayPal, Intel, Walmart…: checking them was blocked in the agent session), Apple, Meta, Uber.
 
@@ -65,3 +65,7 @@ Keyword-based for now (`src/jobs/score.ts`): level (up to 32), location (up to 1
 - Referrals are a small share of applicants but a large share of hires. When a strong match appears, ask someone at the company before applying.
 - Funding-triggered outreach (message engineers at startups that just raised Seed or Series A, with a deployed project) is the most-cited way past crowded portals.
 - Read only official pages for scheme rules, and never pay for job access.
+
+## Live run, 16 Nov 2026 (all sources)
+
+138 sources in about 42 seconds; 50 roles kept. Amazon 12, Harvey 5 (2027 new grad, sponsorship), Coupa 4, ServiceNow 3, and 1–2 each from Google, Workato (Hyderabad intern), Sophos, Roblox, Pure Storage, Toast and others. Microsoft and Netflix were rate-limited (HTTP 429) after repeated test runs; the hourly limit lets them recover.
