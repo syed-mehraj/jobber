@@ -2,7 +2,7 @@
 
 Blue and white on a dim, cool-grey background. Calm, dense enough for real work, and professional: closer to a modern SaaS tool than a portfolio. Open `docs/design/preview.html` in a browser to see every token and component below.
 
-**References.** Patterns only, studied from public galleries (Dribbble, Mobbin) and rezi.ai: a fixed left sidebar, white cards on a tinted canvas, a split editor, score badges, a kanban tracker. Nothing is copied: no screenshots, assets, logos or brand colours from other products are stored in this repo.
+**References.** Patterns only, studied from public galleries (Dribbble, Mobbin) and rezi.ai: a slim header with a slide-out menu, white cards on a tinted canvas, a split editor, score badges, a kanban tracker. Nothing is copied: no screenshots, assets, logos or brand colours from other products are stored in this repo.
 
 ## 1. Colour
 
