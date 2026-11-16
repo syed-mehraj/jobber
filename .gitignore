@@ -22,3 +22,8 @@ private/
 *.log
 .DS_Store
 .vercel
+
+# from the Next.js template
+*.pem
+next-env.d.ts
+/build
