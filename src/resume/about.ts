@@ -1,6 +1,6 @@
 /**
- * The owner's own description of their work, saved on 16 Nov 2026. Shown in the "About you" panel on the
- * Resumes page (editable there) and used as extra context for matching. Seeded once; edits live in settings.
+ * The owner's own description of their work, saved on 16 Nov 2026. It becomes the first entry in the
+ * "About you" section (the `abouts` table) on a fresh database; after that, entries are edited in the app.
  */
 export const defaultAbout = `I’m currently working as an AI Engineer at Parcera, where I’ve been deeply involved in building and developing our voice AI platform. My role goes beyond maintaining the system. I’ve contributed to bringing the platform to where it is today, working on the AI side as well as the underlying integrations and infrastructure.
 
@@ -14,6 +14,8 @@ What I enjoy most is the combination of research, problem-solving, and building 
 
 I'm currently pursuing a B.E. in AI and Machine Learning with a 9.0 CGPA. I primarily work with Python and Git and have hands-on experience with REST APIs, service integrations, and debugging distributed systems. While I haven't directly administered Salesforce, SAP, or NetSuite, I'm comfortable learning new platforms and understanding how they fit into a larger technical environment. I believe my experience building, researching, integrating, and maintaining a complex AI platform would allow me to contribute meaningfully to this role.`
 
-export type About = { text: string }
+export type About = { id: number; title: string; target: string | null; text: string; updatedAt: Date }
+
+export const ABOUT_TITLE_MAX = 120
 
 export const ABOUT_MAX = 6000

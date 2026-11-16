@@ -8,11 +8,11 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { ResumeIcon } from '@/components/ui/icons'
 import { PageHeader } from '@/components/ui/page-header'
 import { Skeleton } from '@/components/ui/skeleton'
-import { AboutCard } from '@/components/resume/about-card'
+import { AboutSection } from '@/components/resume/about-section'
 import { timeAgo } from '@/lib/format'
-import { getAbout, getResumes, type ResumeRecord } from '@/lib/resumes'
+import { getAbouts, getResumes, type ResumeRecord } from '@/lib/resumes'
 import { countBullets, countSections } from '@/resume/types'
-import { saveAbout } from './actions'
+import { createAbout, deleteAbout, duplicateAbout, updateAbout } from './actions'
 
 export const metadata: Metadata = { title: 'Resumes' }
 
@@ -63,13 +63,20 @@ async function Resumes() {
   )
 }
 
+const aboutActions = { create: createAbout, update: updateAbout, duplicate: duplicateAbout, remove: deleteAbout }
+
 async function About() {
-  const about = await getAbout()
+  const items = await getAbouts()
   return (
-    <AboutCard
-      text={about.text}
-      updated={about.updatedAt ? `saved ${timeAgo(about.updatedAt)}` : null}
-      save={saveAbout}
+    <AboutSection
+      items={items.map((a) => ({
+        id: a.id,
+        title: a.title,
+        target: a.target,
+        text: a.text,
+        updated: `saved ${timeAgo(a.updatedAt)}`,
+      }))}
+      actions={aboutActions}
     />
   )
 }

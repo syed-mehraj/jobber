@@ -1,6 +1,6 @@
 import { and, desc, eq, gt, inArray, isNull, lt, sql } from 'drizzle-orm'
 import type { DB } from '@/db'
-import { jobs, resumes, runs, settings, sources } from '@/db/schema'
+import { abouts, jobs, resumes, runs, settings, sources } from '@/db/schema'
 import { adapters, UNOFFICIAL_KINDS } from './adapters'
 import { classify } from './filters'
 import { defaultProfile, scoreJob, type Profile } from './score'
@@ -48,12 +48,13 @@ export async function loadProfile(db: DB): Promise<Profile> {
     .from(resumes)
     .where(eq(resumes.isMaster, true))
     .limit(1)
-  const [about] = await db.select({ value: settings.value }).from(settings).where(eq(settings.key, 'about')).limit(1)
-  const aboutText = (about?.value as { text?: string } | undefined)?.text ?? ''
+  const aboutText = (await db.select({ text: abouts.text }).from(abouts)).map((a) => a.text).join('\n\n')
   if (!master && !aboutText) return profile
   const skills = new Set(profile.skills.map(canonicalSkill))
   // Skills named in "About you" count too, except ones it explicitly says you haven't used.
-  const notUsed = /haven.t (directly )?(used|administered|worked with)[^.]*/i.exec(aboutText)?.[0] ?? ''
+  const notUsed = [...aboutText.matchAll(/haven.t (directly )?(used|administered|worked with)[^.]*/gi)]
+    .map((m) => m[0])
+    .join(' ')
   const aboutSkills = extractSkills(aboutText).filter((s) => !extractSkills(notUsed).includes(s))
   for (const s of [...extractSkills(resumeText(master?.content)), ...aboutSkills]) skills.add(s)
   return { ...profile, skills: [...skills] }

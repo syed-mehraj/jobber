@@ -2,7 +2,7 @@ import 'server-only'
 import { asc, desc, eq } from 'drizzle-orm'
 import { connection } from 'next/server'
 import { getDb } from '@/db'
-import { resumes, settings } from '@/db/schema'
+import { abouts, resumes } from '@/db/schema'
 import { requireSession } from '@/lib/auth/session'
 import type { About } from '@/resume/about'
 import { toContent, type ResumeContent } from '@/resume/types'
@@ -49,10 +49,17 @@ export async function getResume(id: number): Promise<ResumeRecord | null> {
   return row ? toRecord(row) : null
 }
 
-/** The owner's own description of their work (the "About you" panel). */
-export async function getAbout(): Promise<{ text: string; updatedAt: Date | null }> {
+/** Every "About you" description, most recently edited first. */
+export async function getAbouts(): Promise<About[]> {
   const d = await db()
-  const [row] = await d.select().from(settings).where(eq(settings.key, 'about')).limit(1)
-  const text = (row?.value as About | undefined)?.text
-  return { text: typeof text === 'string' ? text : '', updatedAt: row?.updatedAt ?? null }
+  return d
+    .select({
+      id: abouts.id,
+      title: abouts.title,
+      target: abouts.target,
+      text: abouts.text,
+      updatedAt: abouts.updatedAt,
+    })
+    .from(abouts)
+    .orderBy(desc(abouts.updatedAt), desc(abouts.id))
 }

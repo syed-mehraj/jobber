@@ -15,6 +15,13 @@
       "when": 1794813436251,
       "tag": "0001_fit_details",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794847580572,
+      "tag": "0002_abouts",
+      "breakpoints": true
     }
   ]
 }

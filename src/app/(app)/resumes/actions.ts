@@ -1,23 +1,71 @@
 'use server'
 
-import { sql } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import { refresh } from 'next/cache'
 import { getDb } from '@/db'
-import { settings } from '@/db/schema'
+import { abouts } from '@/db/schema'
 import { requireSession } from '@/lib/auth/session'
-import { ABOUT_MAX } from '@/resume/about'
+import { ABOUT_MAX, ABOUT_TITLE_MAX } from '@/resume/about'
 
-export async function saveAbout(text: string): Promise<{ ok: boolean; error?: string }> {
-  await requireSession()
-  const value = String(text ?? '')
+export type AboutInput = { title: string; target: string; text: string }
+export type AboutResult = { ok: boolean; error?: string; id?: number }
+
+function clean(input: AboutInput): { value?: { title: string; target: string | null; text: string }; error?: string } {
+  const title = String(input.title ?? '').trim()
+  const target = String(input.target ?? '').trim()
+  const text = String(input.text ?? '')
     .replace(/\r\n/g, '\n')
     .trim()
-  if (value.length > ABOUT_MAX) return { ok: false, error: `Keep it under ${ABOUT_MAX} characters.` }
+  if (!title) return { error: 'Give it a short title, e.g. "AI Engineer roles".' }
+  if (title.length > ABOUT_TITLE_MAX) return { error: `Keep the title under ${ABOUT_TITLE_MAX} characters.` }
+  if (!text) return { error: 'Write the description.' }
+  if (text.length > ABOUT_MAX) return { error: `Keep it under ${ABOUT_MAX} characters.` }
+  return { value: { title, target: target ? target.slice(0, ABOUT_TITLE_MAX) : null, text } }
+}
+
+export async function createAbout(input: AboutInput): Promise<AboutResult> {
+  await requireSession()
+  const { value, error } = clean(input)
+  if (!value) return { ok: false, error }
+  const db = await getDb()
+  const [row] = await db.insert(abouts).values(value).returning({ id: abouts.id })
+  refresh()
+  return { ok: true, id: row.id }
+}
+
+export async function updateAbout(id: number, input: AboutInput): Promise<AboutResult> {
+  await requireSession()
+  if (!Number.isInteger(id)) return { ok: false, error: 'Not found.' }
+  const { value, error } = clean(input)
+  if (!value) return { ok: false, error }
   const db = await getDb()
   await db
-    .insert(settings)
-    .values({ key: 'about', value: { text: value } })
-    .onConflictDoUpdate({ target: settings.key, set: { value: { text: value }, updatedAt: sql`now()` } })
+    .update(abouts)
+    .set({ ...value, updatedAt: new Date() })
+    .where(eq(abouts.id, id))
+  refresh()
+  return { ok: true, id }
+}
+
+export async function duplicateAbout(id: number): Promise<AboutResult> {
+  await requireSession()
+  if (!Number.isInteger(id)) return { ok: false, error: 'Not found.' }
+  const db = await getDb()
+  const [src] = await db.select().from(abouts).where(eq(abouts.id, id))
+  if (!src) return { ok: false, error: 'Not found.' }
+  const [row] = await db
+    .insert(abouts)
+    .values({ title: `${src.title} (copy)`.slice(0, ABOUT_TITLE_MAX), target: src.target, text: src.text })
+    .returning({ id: abouts.id })
+  refresh()
+  return { ok: true, id: row.id }
+}
+
+export async function deleteAbout(id: number): Promise<AboutResult> {
+  await requireSession()
+  if (!Number.isInteger(id)) return { ok: false, error: 'Not found.' }
+  const db = await getDb()
+  await db.delete(abouts).where(eq(abouts.id, id))
   refresh()
   return { ok: true }
 }

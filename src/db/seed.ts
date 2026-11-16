@@ -1,4 +1,4 @@
-import { count, sql } from 'drizzle-orm'
+import { count, eq, sql } from 'drizzle-orm'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
 import { catalog as officialCatalog } from '@/jobs/catalog'
 import { unofficialCatalog } from '@/jobs/catalog-unofficial'
@@ -24,10 +24,17 @@ export async function syncCatalog(db: NodePgDatabase<typeof schema>): Promise<vo
       })
   }
   await db.insert(schema.settings).values({ key: 'profile', value: defaultProfile }).onConflictDoNothing()
-  await db
-    .insert(schema.settings)
-    .values({ key: 'about', value: { text: defaultAbout } })
-    .onConflictDoNothing()
+  // "About you": start with one description. An older single description saved in settings moves over first.
+  const [{ a }] = await db.select({ a: count() }).from(schema.abouts)
+  if (a === 0) {
+    const [old] = await db.select().from(schema.settings).where(eq(schema.settings.key, 'about'))
+    const oldText = (old?.value as { text?: string } | undefined)?.text
+    await db.insert(schema.abouts).values({
+      title: 'AI Engineer at Parcera (general)',
+      target: null,
+      text: oldText?.trim() || defaultAbout,
+    })
+  }
 
   const [{ n }] = await db.select({ n: count() }).from(schema.resumes)
   if (n === 0) {

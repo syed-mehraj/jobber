@@ -179,18 +179,20 @@ describe('duplicates', () => {
 })
 
 describe('loadProfile with About you', () => {
-  it('counts skills from the description but not the ones it says you have not used', async () => {
+  it('counts skills from every description but not the ones they say you have not used', async () => {
     const { loadProfile } = await import('./run')
-    const { settings } = await import('@/db/schema')
+    const { abouts } = await import('@/db/schema')
     const db = await createTestDb()
-    await db.insert(settings).values({
-      key: 'about',
-      value: {
-        text: 'I work with Python and Git and debug distributed systems. While I haven’t directly administered Salesforce or SAP, I learn fast.',
+    await db.insert(abouts).values([
+      { title: 'General', text: 'I build services and debug distributed systems with Kubernetes.' },
+      {
+        title: 'Admin roles',
+        text: 'I deploy with Terraform daily. While I haven’t directly administered Salesforce or SAP, I learn fast.',
       },
-    })
+    ])
     const profile = await loadProfile(db)
-    expect(profile.skills).toEqual(expect.arrayContaining(['python', 'git']))
+    // Neither skill is in the default profile, so these can only come from the descriptions.
+    expect(profile.skills).toEqual(expect.arrayContaining(['kubernetes', 'terraform']))
     expect(profile.skills).not.toContain('salesforce')
   })
 })

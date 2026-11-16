@@ -126,6 +126,21 @@ export const resumes = pgTable('resumes', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
+/**
+ * "About you" descriptions: the owner's own words about their work, one per kind of application
+ * (e.g. a general one, one for an AI role, one for a Salesforce-admin role). Copied into applications and
+ * read for matching.
+ */
+export const abouts = pgTable('abouts', {
+  id: serial('id').primaryKey(),
+  title: text('title').notNull(),
+  /** Optional: the company or role it was written for. */
+  target: text('target'),
+  text: text('text').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
 /** Small key/value settings: the matching profile, the last dashboard visit… */
 export const settings = pgTable('settings', {
   key: text('key').primaryKey(),
