@@ -4,6 +4,7 @@ import { cx } from '@/lib/cx'
 import type { JobRow } from '@/lib/data'
 import { ageInDays, levelLabel, shortAge, sourceLabel } from '@/lib/format'
 import { bandText, scoreBand } from '@/lib/score'
+import { isUnofficial } from '@/jobs/unofficial'
 
 /**
  * One job. Line 1: role (opens the fit panel) and New. Line 2: company · location.
@@ -46,6 +47,7 @@ export function JobRowItem({ job, href, selected = false }: { job: JobRow; href:
         </span>
         <span className="mt-0.5 block truncate text-caption text-ink-3">
           {sourceLabel[job.sourceKind] ?? job.source}
+          {isUnofficial(job.sourceKind) && ' (unofficial)'}
           {' · '}
           <span className={cx(stale && 'font-medium text-warning')}>
             {job.postedAt ? `posted ${shortAge(job.postedAt)}` : `seen ${shortAge(job.firstSeenAt)}`}

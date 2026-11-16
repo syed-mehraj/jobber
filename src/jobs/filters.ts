@@ -13,17 +13,17 @@ export type Classified =
   { keep: false; reason: string } | { keep: true; level: Level; region: Region; category: string; flags: string[] }
 
 const TECH =
-  /\b(software|sde|swe|developer|engineer(ing)?|programmer|machine learning|ml|ai|data scien\w*|research scien\w*|applied scien\w*|data engineer|full[- ]?stack|back[- ]?end|front[- ]?end|devops|sre|android|ios|mobile)\b/i
+  /\b(software|sde|swe|developer|engineer(ing)?|programmer|machine learning|ml|ai|data scien\w*|research scien\w*|researcher|applied scien\w*|data engineer|full[- ]?stack|back[- ]?end|front[- ]?end|devops|sre|android|ios|mobile)\b/i
 const NOT_TECH =
-  /\b(sales|account (executive|manager)|marketing|recruit\w*|talent|legal|counsel|finance|accountant|payroll|hr|human resources|customer|support|success|solutions? (engineer|consultant|architect)|pre-?sales|field|business|operations|program manager|product manager|project manager|designer|design|content|writer|mechanical|civil|electrical|hardware|analog|asic|rtl|rf|silicon|physical design|verification|manufacturing|quality assurance technician|technician|construction|nurse|clinical|pharma\w*|teacher|tutor|professional services|implementation|consultant|salesforce|sap|servicenow developer|admin|administrator|people systems|it support|helpdesk)\b/i
+  /\b(sales|account (executive|manager)|marketing|recruit\w*|talent|legal|counsel|finance|accountant|payroll|hr|human resources|customer|support|success|solutions? (engineer|consultant|architect)|pre-?sales|field|business|operations|program manager|product manager|project manager|designer|design|content|writer|mechanical|civil|electrical|hardware|analog|asic|rtl|rf|silicon|physical design|verification|manufacturing|quality assurance technician|technician|construction|nurse|clinical|pharma\w*|teacher|tutor|professional services|implementation|consultant|salesforce|sap|servicenow developer|admin|administrator|people systems|it support|helpdesk|ux|user research\w*)\b/i
 const SENIOR =
-  /\b(senior|sr\.?|staff|principal|lead|leader|manager|mgr|mgmt|management|director|dir\.?|head|intermediate|mid[- ]?level|experienced|architect|vp|vice president|chief|distinguished|expert|specialist ii|(engineer|developer|sde|swe|scientist)\s*(ii|iii|iv|2|3|4)|(ii|iii|iv)$|l[4-9]|e[4-9]|mts\s*(2|3|ii|iii)|smts|lmts|pmts)\b/i
+  /\b(senior|sr\.?|staff|principal|lead|leader|manager|mgr|mgmt|management|director|dir\.?|head|intermediate|mid[- ]?level|experienced|architect|vp|vice president|chief|distinguished|expert|specialist ii|(engineer|developer|sde|swe|scientist)\s*[-–]?\s*(ii|iii|iv|2|3|4)|(ii|iii|iv)$|l[4-9]|e[4-9]|mts\s*(2|3|ii|iii)|smts|lmts|pmts)\b/i
 const INTERN = /\b(intern(ship)?|co-?op|apprentice(ship)?|trainee|summer analyst|industrial training)\b/i
 const NEW_GRAD =
   /\b(new grad\w*|graduate|university|campus|early career|entry[- ]level|fresher|freshers|junior|jr\.?|associate (software|engineer|developer)|(sde|swe|engineer|developer)\s*[-–]?\s*(i|1)\b|level 1|grad(uate)? program|class of 2027|2027)\b/i
 const PAST_INTAKE = /\b20(1\d|2[0-6])\b/
 const EXPERIENCE =
-  /(\d{1,2})\s*(?:\+|plus)?\s*(?:-|–|to)?\s*(?:\d{1,2})?\s*\+?\s*years?(?:'|’)?\s*(?:of)?\s*(?:\w+\s){0,4}?(?:experience|exp\b)/gi
+  /(\d{1,2})\s*(?:\+|plus)?\s*(?:-|–|to)?\s*(?:\d{1,2})?\s*\+?\s*years?(?:'|’)?\s*(?:of)?\s*(?:[\w-]+\s){0,6}?(?:experience|exp\b)/gi
 const NO_SPONSOR =
   /(not (able|going) to (offer|provide) (visa )?sponsorship|unable to (offer|provide)? ?sponsor|no (visa )?sponsorship|without (the need for )?(visa )?sponsorship|must be (legally )?authori[sz]ed to work|u\.?s\.? citizen(ship)?|security clearance|green card|permanent resident)/i
 const SPONSOR =
@@ -90,6 +90,7 @@ export function classify(p: RawPosting, now = new Date()): Classified {
 
   if (!TECH.test(title) || NOT_TECH.test(title)) return { keep: false, reason: 'not an engineering role' }
   if (SENIOR.test(title)) return { keep: false, reason: 'senior role' }
+  if (/\b(ph\.?\s?d|doctoral|postdoc\w*|mba)\b/i.test(title)) return { keep: false, reason: 'needs a PhD or MBA' }
 
   const yearsInTitle = title.match(PAST_INTAKE)
   if (yearsInTitle && !/2027|2028/.test(title)) return { keep: false, reason: 'past intake' }

@@ -16,7 +16,20 @@ Only sources that publish a public feed meant for this use. Each is read again w
 
 The company list is in `src/jobs/catalog.ts` (60 boards, verified 16 Nov 2026); its health is on Settings → Companies and sources. Greenhouse boards are listed without descriptions first, and descriptions are downloaded only for roles that could pass the filters.
 
-Companies checked but not readable here (no board on these four systems): Amazon, Microsoft, Google, Apple, Meta, Uber, Atlassian (iCIMS); Adobe, Nvidia, Salesforce, PayPal, Mastercard, Visa, Intel, BrowserStack, Sprinklr (Workday); Flipkart, Ola, Setu (TurboHire); Rapido, Spinny (Darwinbox); Plum, SaaS Labs, Cashfree (Kula); Zoho, Rippling, PhonePe, Zerodha, Postman, Chargebee, CleverTap. Set email alerts on their career sites instead.
+## Read unofficially (owner's choice, 16 Nov 2026)
+
+Big-tech careers sites publish no feed. At the owner's request the app reads the same data their own search pages load, for personal use only, **at most once an hour**, and marks these jobs "unofficial" in the UI. They may break or be blocked at any time, and their site terms generally forbid automated reading; the owner accepted that. Code: `src/jobs/catalog-unofficial.ts`, `src/jobs/adapters/{amazon,eightfold,google}.ts`.
+
+| Company | What is read | First run (16 Nov 2026) |
+|---|---|---|
+| Amazon | amazon.jobs search JSON, India only, 5 searches | 572 postings, 12 kept |
+| Google | Google Careers results page data, India, early-career and intern | 29 postings, 2 kept |
+| Microsoft | apply.careers.microsoft.com search JSON (Eightfold), India, 3 searches × 3 pages, 1.5 s apart | rate-limited (HTTP 429) on the first, faster version; slowed down |
+| Netflix | explore.jobs.netflix.net jobs JSON (Eightfold), India | 10 postings, 0 kept |
+
+Not read even unofficially: Flipkart (TurboHire requires fetching an access token, a deliberate gate), the Workday sites (Adobe, Nvidia, Salesforce, PayPal, Intel, Walmart…: checking them was blocked in the agent session), Apple, Meta, Uber.
+
+Companies checked but not readable through the four official systems: Amazon, Microsoft, Google, Apple, Meta, Uber, Atlassian (iCIMS); Adobe, Nvidia, Salesforce, PayPal, Mastercard, Visa, Intel, BrowserStack, Sprinklr (Workday); Flipkart, Ola, Setu (TurboHire); Rapido, Spinny (Darwinbox); Plum, SaaS Labs, Cashfree (Kula); Zoho, Rippling, PhonePe, Zerodha, Postman, Chargebee, CleverTap. Set email alerts on their career sites instead.
 
 ## Not read automatically, and why
 

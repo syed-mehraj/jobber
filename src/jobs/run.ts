@@ -1,7 +1,7 @@
 import { and, desc, eq, gt, inArray, isNull, lt, sql } from 'drizzle-orm'
 import type { DB } from '@/db'
 import { jobs, resumes, runs, settings, sources } from '@/db/schema'
-import { adapters } from './adapters'
+import { adapters, UNOFFICIAL_KINDS } from './adapters'
 import { classify } from './filters'
 import { defaultProfile, scoreJob, type Profile } from './score'
 import { canonicalSkill, extractSkills } from './skills'
@@ -18,6 +18,8 @@ export type RunSummary = {
 }
 
 const CONCURRENCY = 8
+/** Minimum gap between reads of an unofficial source. */
+const UNOFFICIAL_INTERVAL_MS = 60 * 60 * 1000
 /** A run that hasn't finished after this long is treated as dead, so a crash can't block searches forever. */
 const STALE_LOCK_MS = 10 * 60 * 1000
 
@@ -72,7 +74,13 @@ export async function runSearch(
 
   const [run] = await db.insert(runs).values({ trigger, startedAt: started }).returning({ id: runs.id })
   const profile = await loadProfile(db)
-  const list = await db.select().from(sources).where(eq(sources.enabled, true))
+  // Unofficial sources (big-tech careers sites) are read at most once an hour, whatever triggered the run.
+  const list = (await db.select().from(sources).where(eq(sources.enabled, true))).filter(
+    (s) =>
+      !UNOFFICIAL_KINDS.has(s.kind) ||
+      !s.lastRunAt ||
+      started.getTime() - s.lastRunAt.getTime() >= UNOFFICIAL_INTERVAL_MS,
+  )
 
   const totals = { sourcesOk: 0, sourcesFailed: 0, seen: 0, kept: 0, added: 0, closed: 0 }
   const errors: { source: string; error: string }[] = []
@@ -84,9 +92,14 @@ export async function runSearch(
     try {
       const postings = await adapter(source.config, source.name)
       const keptRows = []
+      // Some companies post the same role several times (one per opening); keep one per title and location.
+      const seenRoles = new Set<string>()
       for (const p of postings) {
         const c = classify(p, at)
         if (!c.keep) continue
+        const roleKey = `${p.title.toLowerCase().replace(/\s+/g, ' ').trim()}|${p.location.toLowerCase()}`
+        if (seenRoles.has(roleKey)) continue
+        seenRoles.add(roleKey)
         const s = scoreJob(p, c, profile, at)
         keptRows.push({
           sourceId: source.id,

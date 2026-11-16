@@ -1,16 +1,18 @@
 import { count, sql } from 'drizzle-orm'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
-import { catalog } from '@/jobs/catalog'
+import { catalog as officialCatalog } from '@/jobs/catalog'
+import { unofficialCatalog } from '@/jobs/catalog-unofficial'
 import { defaultProfile } from '@/jobs/score'
 import { masterResume } from '@/resume/master'
 import { allSkills } from '@/resume/types'
 import * as schema from './schema'
 
 /**
- * Brings the sources table in line with src/jobs/catalog.ts and stores the default matching profile once.
+ * Brings the sources table in line with src/jobs/catalog.ts and catalog-unofficial.ts and stores the default matching profile once.
  * On a database with no resumes it also adds the master resume and bases the profile's skills on it.
  */
 export async function syncCatalog(db: NodePgDatabase<typeof schema>): Promise<void> {
+  const catalog = [...officialCatalog, ...unofficialCatalog]
   if (catalog.length) {
     await db
       .insert(schema.sources)

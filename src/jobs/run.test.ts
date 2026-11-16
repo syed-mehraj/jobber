@@ -145,3 +145,35 @@ describe('loadProfile', () => {
     expect(resumeText({ a: 'TODO', b: ['x', { c: 'y' }] })).toBe('x\ny')
   })
 })
+
+describe('unofficial sources', () => {
+  it('are read at most once an hour', async () => {
+    const db = await createTestDb()
+    await db.insert(sources).values({ key: 'unofficial:amazon', kind: 'amazon', name: 'Amazon', config: {} })
+    let calls = 0
+    const fakeAmazon = {
+      amazon: async () => {
+        calls++
+        return [posting('a1', 'Software Development Engineer I')]
+      },
+    }
+    let t = new Date('2026-11-16T06:00:00Z')
+    await runSearch(db, 'manual', { adapters: fakeAmazon, now: () => t })
+    t = new Date('2026-11-16T06:30:00Z')
+    await runSearch(db, 'manual', { adapters: fakeAmazon, now: () => t })
+    expect(calls).toBe(1)
+    t = new Date('2026-11-16T07:01:00Z')
+    await runSearch(db, 'manual', { adapters: fakeAmazon, now: () => t })
+    expect(calls).toBe(2)
+  })
+})
+
+describe('duplicates', () => {
+  it('keeps one posting per title and location within a source', async () => {
+    const db = await createTestDb()
+    await db.insert(sources).values({ key: 'fake:dupe', kind: 'fake', name: 'Acme', config: {} })
+    const twice = [posting('d1', 'Software Development Engineer I'), posting('d2', 'Software Development Engineer I')]
+    const summary = await runSearch(db, 'manual', { adapters: { fake: async () => twice } })
+    expect(summary?.kept).toBe(1)
+  })
+})

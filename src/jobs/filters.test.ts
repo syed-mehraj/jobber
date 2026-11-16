@@ -154,3 +154,29 @@ describe('more wording', () => {
     expect(classify(p('Devops Engineer - I', 'Gurugram'), now)).toMatchObject({ keep: true, level: 'new-grad' })
   })
 })
+
+describe('degree-gated roles', () => {
+  it('drops PhD and MBA roles', () => {
+    expect(classify(p('Software Engineering PhD Intern, Summer 2027', 'Bengaluru'), now)).toMatchObject({
+      keep: false,
+      reason: 'needs a PhD or MBA',
+    })
+    expect(classify(p('Student Researcher, 2027', 'Bengaluru'), now)).toMatchObject({ keep: true })
+  })
+})
+
+describe('Amazon wording', () => {
+  it('reads hyphenated levels and long experience phrases', () => {
+    expect(classify(p('SDE-II, AB Mobile', 'Hyderabad'), now)).toMatchObject({ keep: false, reason: 'senior role' })
+    expect(classify(p('Software Development Engineer - 3, Tax', 'Bengaluru'), now)).toMatchObject({ keep: false })
+    expect(minYears('- 3+ years of non-internship professional software development experience')).toBe(3)
+    expect(
+      classify(
+        p('Software Development Engineer, ESI', 'Hyderabad', {
+          description: '- 3+ years of non-internship professional software development experience',
+        }),
+        now,
+      ),
+    ).toMatchObject({ keep: false, reason: 'asks for 3+ years' })
+  })
+})

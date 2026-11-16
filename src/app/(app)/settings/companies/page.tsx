@@ -6,6 +6,7 @@ import { PageHeader } from '@/components/ui/page-header'
 import { Skeleton } from '@/components/ui/skeleton'
 import { getSources } from '@/lib/data'
 import { timeAgo } from '@/lib/format'
+import { isUnofficial } from '@/jobs/unofficial'
 
 export const metadata: Metadata = { title: 'Companies and sources' }
 
@@ -16,6 +17,9 @@ const KIND: Record<string, string> = {
   smartrecruiters: 'SmartRecruiters',
   simplify: 'GitHub list',
   hackernews: 'Hacker News',
+  amazon: 'Careers site',
+  eightfold: 'Careers site (Eightfold)',
+  google: 'Careers site',
 }
 
 export default function CompaniesPage() {
@@ -29,8 +33,8 @@ export default function CompaniesPage() {
         <SourceList />
       </Suspense>
       <p className="mt-4 text-small text-ink-3">
-        The list lives in <code>src/jobs/catalog.ts</code>. Only sources with a public feed are read automatically; the
-        rest are on the Programs page.
+        Official boards are in <code>src/jobs/catalog.ts</code>; the unofficial big-tech careers sites, read at most
+        once an hour, are in <code>src/jobs/catalog-unofficial.ts</code>. Everything else is on the Programs page.
       </p>
     </>
   )
@@ -54,7 +58,14 @@ async function SourceList() {
           {rows.map((s) => (
             <tr key={s.id} className="border-t border-line">
               <td className="px-4 py-2.5 font-medium sm:pl-[22px]">{s.name}</td>
-              <td className="px-4 py-2.5 text-ink-2">{KIND[s.kind] ?? s.kind}</td>
+              <td className="px-4 py-2.5 text-ink-2">
+                {KIND[s.kind] ?? s.kind}
+                {isUnofficial(s.kind) && (
+                  <span className="ml-1.5" title="No published feed; read at most once an hour">
+                    <Badge tone="warning">Unofficial</Badge>
+                  </span>
+                )}
+              </td>
               <td className="px-4 py-2.5 text-right">{s.lastSeen}</td>
               <td className="px-4 py-2.5 text-right font-medium">{s.lastKept}</td>
               <td className="px-4 py-2.5 sm:pr-[22px]">

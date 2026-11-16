@@ -31,6 +31,9 @@ export const sourceLabel: Record<string, string> = {
   smartrecruiters: 'SmartRecruiters',
   simplify: 'GitHub list',
   hackernews: 'Hacker News',
+  amazon: 'Careers site',
+  eightfold: 'Careers site',
+  google: 'Careers site',
 }
 
 /** Days since a date, rounded down; null when unknown. */

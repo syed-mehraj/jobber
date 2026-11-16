@@ -10,6 +10,7 @@ import { cx } from '@/lib/cx'
 import type { JobDetail } from '@/lib/data'
 import { ageInDays, levelLabel, regionLabel, shortAge, sourceLabel } from '@/lib/format'
 import { bandText, scoreBand } from '@/lib/score'
+import { isUnofficial } from '@/jobs/unofficial'
 
 /**
  * The fit panel beside the job list: why a role matched, what it asks for, how fresh it is,
@@ -18,6 +19,7 @@ import { bandText, scoreBand } from '@/lib/score'
 export function JobInspector({ job, closeHref }: { job: JobDetail; closeHref?: string }) {
   const source = sourceLabel[job.sourceKind] ?? job.source
   const companyBoard = ['greenhouse', 'lever', 'ashby', 'smartrecruiters'].includes(job.sourceKind)
+  const unofficial = isUnofficial(job.sourceKind)
   const age = ageInDays(job.postedAt ?? job.firstSeenAt)
   const host = (() => {
     try {
@@ -119,7 +121,13 @@ export function JobInspector({ job, closeHref }: { job: JobDetail; closeHref?: s
 
         <Section title="Where Apply goes">
           <p className="text-small text-ink-2">
-            {companyBoard ? (
+            {unofficial ? (
+              <>
+                {job.company}’s own careers site (<span className="font-medium text-ink">{host}</span>). Read through an{' '}
+                <span className="font-medium text-warning">unofficial feed</span>, checked at most once an hour, so
+                confirm the role is still open on the page.
+              </>
+            ) : companyBoard ? (
               <>
                 The company’s own {source} page (<span className="font-medium text-ink">{host}</span>), so your
                 application goes straight to its recruiters.
@@ -163,7 +171,9 @@ export function JobInspector({ job, closeHref }: { job: JobDetail; closeHref?: s
           url={job.url}
           label={`${job.title} at ${job.company}`}
           applied={job.applied}
-          prominent={companyBoard ? `Apply on ${source}` : 'Open the posting'}
+          prominent={
+            unofficial ? `Apply on ${job.company} careers` : companyBoard ? `Apply on ${source}` : 'Open the posting'
+          }
         />
         <DismissButton jobId={job.id} dismissed={job.dismissed} />
       </div>

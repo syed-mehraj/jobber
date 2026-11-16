@@ -111,8 +111,8 @@ export const platforms: Platform[] = [
   },
   {
     name: 'Career sites the app can’t read',
-    url: 'https://www.amazon.jobs/en/search?base_query=software&country=IND',
-    why: 'These companies hire through systems without a public feed (Workday, their own sites, Darwinbox, TurboHire…): Amazon, Google, Microsoft, Apple, Atlassian, Adobe, Nvidia, Salesforce, PayPal, Uber, Flipkart, PhonePe, Zerodha, Postman, Zoho, Rippling, BrowserStack, Sprinklr.',
+    url: 'https://www.flipkartcareers.com/',
+    why: 'Google, Microsoft, Amazon and Netflix are now read automatically (unofficially, once an hour). These still are not: Flipkart (its page needs an access token), Apple, Meta, Uber, Atlassian, and the Workday sites of Adobe, Nvidia, Salesforce, PayPal, Intel, Walmart, Qualcomm, Visa and Mastercard; also PhonePe, Zerodha, Postman, Zoho, Rippling, BrowserStack and Sprinklr.',
     how: 'Save a search for "intern" or "new grad" in India on each site and turn on its email alerts.',
     verdict: 'check',
   },
