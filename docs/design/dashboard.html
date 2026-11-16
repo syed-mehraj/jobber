@@ -9,332 +9,206 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
 <style>
   :root {
-    --canvas: #e4e8ef;          /* dim page behind the app frame */
-    --frame: #f3f5f9;           /* inside the frame, behind the cards */
-    --surface: #fff; --surface-muted: #f7f9fc; --sunken: #eceff5;
+    --bg: #eef1f6; --surface: #fff; --surface-muted: #f7f9fc; --sunken: #eceff5;
     --border: #e4e9f1; --border-strong: #cbd3df;
     --text: #0f172a; --text-2: #475569; --text-3: #8391a7;
     --primary: #2563eb; --primary-hover: #1d4ed8; --primary-tint: #eaf1ff; --primary-soft: #dbe7ff;
     --ring: rgb(37 99 235 / .35);
-    --success: #15803d; --success-tint: #e8f6ee; --warning: #b45309; --warning-tint: #fef4e6; --danger: #dc2626; --danger-tint: #fdecec;
-    --sh-sm: 0 1px 2px rgb(15 23 42 / .05); --sh-md: 0 6px 18px rgb(15 23 42 / .07); --sh-frame: 0 24px 60px rgb(15 23 42 / .10);
+    --success: #15803d; --success-tint: #e8f6ee; --warning: #b45309; --warning-tint: #fef4e6;
+    --sh-sm: 0 1px 2px rgb(15 23 42 / .05); --sh-lg: 0 20px 50px rgb(15 23 42 / .18);
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; }
-  body { background: var(--canvas); color: var(--text); font: 400 14px/20px Inter, system-ui, sans-serif; font-variant-numeric: tabular-nums; -webkit-font-smoothing: antialiased; }
+  body { background: var(--bg); color: var(--text); font: 400 15px/22px Inter, system-ui, sans-serif; font-variant-numeric: tabular-nums; -webkit-font-smoothing: antialiased; }
   button { font: inherit; color: inherit; }
+  a { color: inherit; }
   :focus-visible { outline: none; box-shadow: 0 0 0 3px var(--ring); border-radius: 8px; }
 
-  /* the app sits as a rounded frame on the dim canvas */
-  .frame { max-width: 1400px; margin: 20px auto; background: var(--frame); border-radius: 22px; box-shadow: var(--sh-frame);
-    display: grid; grid-template-columns: 232px minmax(0, 1fr); gap: 12px; padding: 12px; min-height: calc(100vh - 40px); }
-
-  /* sidebar */
-  .side { background: var(--surface); border-radius: 16px; padding: 18px 14px; display: flex; flex-direction: column; gap: 4px; box-shadow: var(--sh-sm); }
-  .brand { display: flex; align-items: center; gap: 10px; padding: 2px 8px 18px; font-weight: 600; font-size: 17px; }
+  /* ── header: only the main places, the new-resume action and the menu ── */
+  .head { position: sticky; top: 0; z-index: 10; background: var(--surface); border-bottom: 1px solid var(--border); }
+  .head-in { max-width: 1040px; margin: 0 auto; height: 64px; padding: 0 20px; display: flex; align-items: center; gap: 28px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 17px; text-decoration: none; }
   .brand i { width: 28px; height: 28px; border-radius: 8px; background: var(--primary); display: grid; place-items: center; color: #fff; font: 600 14px Inter; }
-  .new { display: flex; align-items: center; justify-content: center; gap: 8px; height: 40px; border: 0; border-radius: 10px; background: var(--primary); color: #fff;
-    font-weight: 500; cursor: pointer; margin-bottom: 18px; transition: background-color .12s; }
-  .new:hover { background: var(--primary-hover); }
-  .group { font-size: 11.5px; font-weight: 500; color: var(--text-3); letter-spacing: .04em; padding: 10px 10px 6px; }
-  .nav { display: flex; align-items: center; gap: 10px; height: 38px; padding: 0 10px; border-radius: 9px; color: var(--text-2); font-weight: 500; text-decoration: none; transition: background-color .12s, color .12s; }
-  .nav svg { width: 18px; height: 18px; flex: none; }
-  .nav:hover { background: var(--surface-muted); color: var(--text); }
-  .nav.on { background: var(--primary-tint); color: var(--primary); }
-  .nav .n { margin-left: auto; font-size: 12px; min-width: 22px; height: 20px; border-radius: 6px; display: grid; place-items: center; background: var(--sunken); color: var(--text-2); }
-  .nav.on .n { background: var(--primary); color: #fff; }
-  .run { margin-top: auto; border: 1px solid var(--border); border-radius: 12px; padding: 14px; background: var(--surface-muted); }
-  .run b { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 13.5px; }
-  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); box-shadow: 0 0 0 3px var(--success-tint); }
-  .run p { margin: 6px 0 10px; font-size: 12.5px; color: var(--text-2); }
-  .meter { height: 6px; border-radius: 3px; background: var(--sunken); overflow: hidden; } .meter i { display: block; height: 100%; width: 95%; background: var(--primary); border-radius: 3px; }
-  .run small { display: block; margin-top: 6px; font-size: 12px; color: var(--text-3); }
+  .links { display: flex; gap: 4px; height: 100%; }
+  .links a { position: relative; display: flex; align-items: center; padding: 0 12px; color: var(--text-2); font-weight: 500; text-decoration: none; }
+  .links a:hover { color: var(--text); }
+  .links a[aria-current="page"] { color: var(--primary); }
+  .links a[aria-current="page"]::after { content: ""; position: absolute; left: 12px; right: 12px; bottom: -1px; height: 2px; border-radius: 2px; background: var(--primary); }
+  .head-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 38px; padding: 0 16px; border-radius: 9px; border: 1px solid var(--border-strong);
+    background: #fff; color: var(--text); font-weight: 500; cursor: pointer; text-decoration: none; white-space: nowrap; transition: background-color .12s; }
+  .btn:hover { background: var(--surface-muted); }
+  .btn.primary { background: var(--primary); border-color: var(--primary); color: #fff; } .btn.primary:hover { background: var(--primary-hover); }
+  .btn.sm { height: 32px; padding: 0 12px; font-size: 14px; border-radius: 8px; }
+  .btn svg { width: 16px; height: 16px; }
+  .menu-btn { width: 38px; padding: 0; }
 
-  /* main */
-  .main { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
-  .top { display: flex; align-items: center; gap: 10px; background: var(--surface); border-radius: 16px; padding: 10px 12px 10px 16px; box-shadow: var(--sh-sm); }
-  .search { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; max-width: 460px; display: flex; align-items: center; gap: 10px; height: 38px; padding: 0 12px; border-radius: 10px; background: var(--surface-muted); border: 1px solid var(--border); color: var(--text-3); }
-  .search svg { width: 16px; height: 16px; } .kbd { margin-left: auto; font-size: 11px; border: 1px solid var(--border-strong); border-radius: 5px; padding: 0 5px; color: var(--text-3); background: #fff; }
-  .last { margin-left: auto; font-size: 13px; color: var(--text-3); }
-  .icon { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 10px; border: 1px solid var(--border); background: #fff; color: var(--text-2); cursor: pointer; position: relative; }
-  .icon:hover { background: var(--surface-muted); color: var(--text); } .icon svg { width: 18px; height: 18px; }
-  .icon .badge-dot { position: absolute; top: 8px; right: 9px; width: 7px; height: 7px; border-radius: 50%; background: var(--primary); box-shadow: 0 0 0 2px #fff; }
-  .avatar { width: 38px; height: 38px; border-radius: 50%; background: var(--primary-soft); color: var(--primary); display: grid; place-items: center; font-weight: 600; font-size: 13px; }
+  /* ── page: a greeting, three numbers, today's best matches ── */
+  .page { max-width: 1040px; margin: 0 auto; padding: 36px 20px 64px; }
+  h1 { margin: 0; font-size: 28px; line-height: 36px; font-weight: 600; letter-spacing: -0.02em; }
+  .lead { margin: 6px 0 0; color: var(--text-2); font-size: 16px; }
+  .lead b { color: var(--primary); font-weight: 600; }
 
-  .hello { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; padding: 10px 6px 2px; }
-  .hello h1 { margin: 0; font-size: 26px; line-height: 34px; font-weight: 600; letter-spacing: -0.02em; }
-  .hello p { margin: 2px 0 0; color: var(--text-2); }
-  .hello p b { color: var(--primary); font-weight: 600; }
-  .btn { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px; border-radius: 9px; border: 1px solid var(--border-strong); background: #fff; color: var(--text);
-    font-weight: 500; cursor: pointer; transition: background-color .12s, border-color .12s; white-space: nowrap; text-decoration: none; }
-  .btn:hover { background: var(--surface-muted); } .btn svg { width: 16px; height: 16px; }
-  .btn.sm { height: 30px; padding: 0 10px; font-size: 13px; border-radius: 8px; }
-  .btn.ghost { border-color: transparent; color: var(--text-2); } .btn.ghost:hover { background: var(--primary-tint); color: var(--primary); }
+  .nums { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 28px; }
+  .num { display: block; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px 22px; text-decoration: none; box-shadow: var(--sh-sm); transition: border-color .15s; }
+  .num:hover { border-color: var(--primary-soft); }
+  .num b { display: block; font-size: 34px; line-height: 40px; font-weight: 600; letter-spacing: -0.02em; }
+  .num span { color: var(--text-2); }
+  .num:first-child b { color: var(--primary); }
 
-  .card { background: var(--surface); border-radius: 16px; box-shadow: var(--sh-sm); padding: 18px 20px; min-width: 0; }
-  .card-h { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
-  .card-h h2 { margin: 0; font-size: 15.5px; font-weight: 600; } .card-h .sub { font-size: 12.5px; color: var(--text-3); }
-  .card-h .right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+  .card { margin-top: 28px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--sh-sm); }
+  .card-h { display: flex; align-items: center; justify-content: space-between; padding: 18px 22px; border-bottom: 1px solid var(--border); }
+  .card-h h2 { margin: 0; font-size: 17px; font-weight: 600; }
+  .card-h a { color: var(--primary); font-weight: 500; text-decoration: none; font-size: 14px; } .card-h a:hover { text-decoration: underline; }
+  .job { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto auto; gap: 16px; align-items: center; padding: 14px 22px; border-bottom: 1px solid var(--border); }
+  .job:last-child { border-bottom: 0; }
+  .job:hover { background: var(--surface-muted); }
+  .logo { width: 40px; height: 40px; border-radius: 10px; background: var(--sunken); display: grid; place-items: center; font-weight: 600; color: var(--text-2); }
+  .job b { display: block; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .job small { display: block; color: var(--text-3); font-size: 13.5px; }
+  .score { display: inline-flex; flex-direction: column; align-items: flex-end; font-size: 12px; color: var(--text-3); line-height: 16px; }
+  .score strong { font-size: 16px; line-height: 22px; font-weight: 600; }
+  .strong { color: var(--success); } .good { color: var(--primary); }
 
-  /* one stat strip with dividers */
-  .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 0; }
-  .stat { padding: 18px 20px; }
-  .stat + .stat { border-left: 1px solid var(--border); }
-  .stat span { display: block; font-size: 13px; color: var(--text-2); }
-  .stat b { display: block; margin-top: 6px; font-size: 28px; line-height: 34px; font-weight: 600; letter-spacing: -0.02em; }
-  .stat small { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 12.5px; color: var(--text-3); }
-  .delta { height: 20px; padding: 0 7px; border-radius: 6px; font-size: 12px; font-weight: 500; display: inline-flex; align-items: center; }
-  .up { background: var(--success-tint); color: var(--success); } .down { background: var(--danger-tint); color: var(--danger); } .flat { background: var(--sunken); color: var(--text-2); }
+  /* ── menu slider: every place and every action ── */
+  .scrim { position: fixed; inset: 0; z-index: 20; background: rgb(15 23 42 / .32); opacity: 0; pointer-events: none; transition: opacity .2s; }
+  .drawer { position: fixed; z-index: 21; top: 0; right: 0; bottom: 0; width: min(340px, 88vw); background: var(--surface); box-shadow: var(--sh-lg);
+    display: flex; flex-direction: column; transform: translateX(100%); visibility: hidden; transition: transform .24s cubic-bezier(.2, .8, .2, 1), visibility 0s linear .24s; }
+  body.menu-open .scrim { opacity: 1; pointer-events: auto; }
+  body.menu-open .drawer { transform: none; visibility: visible; transition: transform .24s cubic-bezier(.2, .8, .2, 1); }
+  .drawer-h { display: flex; align-items: center; justify-content: space-between; height: 64px; padding: 0 16px 0 20px; border-bottom: 1px solid var(--border); }
+  .drawer-b { flex: 1; overflow-y: auto; padding: 12px; }
+  .group { font-size: 12px; font-weight: 500; color: var(--text-3); padding: 14px 10px 6px; }
+  .item { display: flex; align-items: center; gap: 12px; height: 42px; padding: 0 10px; border-radius: 9px; color: var(--text); text-decoration: none; font-weight: 500; }
+  .item svg { width: 18px; height: 18px; color: var(--text-2); flex: none; }
+  .item:hover { background: var(--surface-muted); }
+  .item[aria-current="page"] { background: var(--primary-tint); color: var(--primary); } .item[aria-current="page"] svg { color: var(--primary); }
+  .item .n { margin-left: auto; font-size: 12.5px; color: var(--text-3); }
+  .run { margin: 6px 4px 0; padding: 14px; border-radius: 12px; background: var(--surface-muted); border: 1px solid var(--border); }
+  .run b { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 14px; }
+  .run p { margin: 4px 0 12px; font-size: 13px; color: var(--text-2); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); }
+  .drawer-f { padding: 14px 20px; border-top: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+  .avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--primary-soft); color: var(--primary); display: grid; place-items: center; font-weight: 600; font-size: 13px; }
+  .drawer-f .who { flex: 1; font-weight: 500; }
+  .phone-only { display: none; }
+  @media (max-width: 420px) { .wide-only { display: none; } }
 
-  .row { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr); gap: 12px; }
+  .note { margin-top: 20px; font-size: 12.5px; color: var(--text-3); }
 
-  /* segmented control */
-  .seg { display: inline-flex; padding: 3px; gap: 2px; background: var(--sunken); border-radius: 9px; }
-  .seg button { height: 28px; padding: 0 11px; border: 0; border-radius: 7px; background: none; color: var(--text-2); font-size: 12.5px; font-weight: 500; cursor: pointer; }
-  .seg button[aria-pressed="true"] { background: #fff; color: var(--text); box-shadow: var(--sh-sm); }
-
-  /* bar chart: grey tracks, today's bar in blue */
-  .chart { display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 8px; height: 220px; }
-  .yax { display: flex; flex-direction: column; justify-content: space-between; font-size: 11.5px; color: var(--text-3); padding-bottom: 24px; text-align: right; }
-  .bars { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 14px; align-items: end; position: relative; }
-  .bars::before { content: ""; position: absolute; inset: 0 0 24px; background: repeating-linear-gradient(to bottom, var(--border) 0 1px, transparent 1px 25%); pointer-events: none; }
-  .bar { position: relative; display: flex; flex-direction: column; align-items: center; gap: 8px; height: 100%; justify-content: flex-end; }
-  .track { position: relative; width: min(100%, 40px); height: calc(100% - 24px); border-radius: 9px; background: var(--surface-muted); display: flex; align-items: flex-end; overflow: visible; }
-  .fill { width: 100%; border-radius: 9px; background: #cfd8e6; transition: height .6s cubic-bezier(.2, .8, .2, 1), background-color .2s; }
-  .bar:hover .fill { background: #b6c3d6; }
-  .bar.today .fill { background: var(--primary); }
-  .tip { position: absolute; left: 50%; translate: -50% 0; font-size: 11.5px; font-weight: 600; padding: 2px 7px; border-radius: 6px; background: var(--primary-tint); color: var(--primary); white-space: nowrap; opacity: 0; transition: opacity .15s; }
-  .bar.today .tip, .bar:hover .tip { opacity: 1; }
-  .bar span.lbl { font-size: 11.5px; color: var(--text-3); height: 16px; } .bar.today span.lbl { color: var(--primary); font-weight: 600; }
-
-  /* gauge */
-  .gauge { display: grid; justify-items: center; }
-  .gauge svg { width: 100%; max-width: 280px; }
-  .g-val { margin-top: -78px; text-align: center; }
-  .g-val b { font-size: 40px; line-height: 44px; font-weight: 600; letter-spacing: -0.03em; } .g-val b sup { font-size: 16px; color: var(--text-3); font-weight: 500; margin-left: 2px; }
-  .g-val span { display: block; font-size: 12.5px; color: var(--text-2); }
-  .bands { width: 100%; margin-top: 18px; display: grid; gap: 8px; }
-  .band { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; align-items: center; gap: 10px; font-size: 13px; color: var(--text-2); }
-  .band i { width: 10px; height: 10px; border-radius: 3px; } .band b { color: var(--text); font-weight: 500; }
-
-  /* matches table */
-  .pills { display: flex; flex-wrap: wrap; gap: 6px; }
-  .pill { height: 30px; padding: 0 11px; border-radius: 8px; border: 1px solid var(--border); background: #fff; color: var(--text-2); font-size: 13px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
-  .pill em { font-style: normal; font-size: 11.5px; color: var(--text-3); }
-  .pill[aria-pressed="true"] { background: var(--primary-tint); border-color: var(--primary-soft); color: var(--primary); } .pill[aria-pressed="true"] em { color: var(--primary); }
-  table { width: 100%; border-collapse: separate; border-spacing: 0; }
-  th { text-align: left; font-size: 12px; font-weight: 500; color: var(--text-3); padding: 9px 12px; background: var(--surface-muted); }
-  th:first-child { border-radius: 9px 0 0 9px; } th:last-child { border-radius: 0 9px 9px 0; }
-  td { padding: 11px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
-  tr:last-child td { border-bottom: 0; }
-  tbody tr { transition: background-color .12s; } tbody tr:hover { background: var(--surface-muted); }
-  .job { display: flex; align-items: center; gap: 11px; min-width: 0; }
-  .logo { width: 34px; height: 34px; flex: none; border-radius: 9px; display: grid; place-items: center; font-weight: 600; font-size: 13px; color: var(--text-2); background: var(--sunken); }
-  .job b { display: block; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .job small { display: block; font-size: 12.5px; color: var(--text-3); }
-  .muted { color: var(--text-2); font-size: 13px; white-space: nowrap; }
-  .score { display: inline-flex; align-items: center; height: 24px; padding: 0 8px; border-radius: 7px; font-weight: 600; font-size: 12.5px; }
-  .s-strong { background: var(--success-tint); color: var(--success); } .s-good { background: var(--primary-tint); color: var(--primary); } .s-part { background: var(--warning-tint); color: var(--warning); }
-  .ver { display: inline-flex; height: 24px; align-items: center; padding: 0 8px; border-radius: 7px; border: 1px solid var(--border); font-size: 12.5px; color: var(--text-2); white-space: nowrap; }
-  .tbl-wrap { overflow-x: auto; }
-  .foot { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; font-size: 12.5px; color: var(--text-3); }
-  .foot a { color: var(--primary); text-decoration: none; font-weight: 500; } .foot a:hover { text-decoration: underline; }
-
-  /* next steps */
-  .steps { display: grid; gap: 8px; }
-  .step { display: grid; grid-template-columns: 36px minmax(0, 1fr) 16px; gap: 12px; align-items: center; padding: 11px 12px; border: 1px solid var(--border); border-radius: 12px; background: #fff;
-    cursor: pointer; text-align: left; transition: border-color .15s, background-color .15s, transform .15s; }
-  .step:hover { border-color: var(--primary-soft); background: var(--surface-muted); transform: translateY(-1px); }
-  .step .ic { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: var(--primary-tint); color: var(--primary); }
-  .step .ic.warn { background: var(--warning-tint); color: var(--warning); } .step .ic.ok { background: var(--success-tint); color: var(--success); }
-  .step .ic svg, .step > svg { width: 18px; height: 18px; } .step > svg { color: var(--text-3); width: 16px; }
-  .step b { display: block; font-weight: 500; font-size: 13.5px; line-height: 18px; } .step small { display: block; font-size: 12.5px; color: var(--text-3); margin-top: 1px; }
-  .note { margin: 14px 4px 0; font-size: 12px; color: var(--text-3); }
-
-  @media (max-width: 1100px) { .row { grid-template-columns: 1fr; } }
-  @media (max-width: 860px) {
-    .frame { grid-template-columns: 1fr; margin: 0; border-radius: 0; padding: 10px; }
-    .side { display: none; }
-    .stats { grid-template-columns: repeat(2, 1fr); } .stat:nth-child(3) { border-left: 0; } .stat:nth-child(n+3) { border-top: 1px solid var(--border); }
-    .last { display: none; } .hello { flex-wrap: wrap; align-items: flex-start; }
+  @media (max-width: 720px) {
+    .links { display: none; }
+    .phone-only { display: block; }
+    .head-in { gap: 12px; }
+    .new-label { display: none; }
+    .nums { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+    .num { padding: 14px; } .num b { font-size: 26px; line-height: 32px; } .num span { font-size: 13px; white-space: nowrap; }
+    .job { grid-template-columns: 36px minmax(0, 1fr) auto; padding: 12px 16px; }
+    .job .btn { grid-column: 2 / -1; justify-self: start; }
+    .card-h { padding: 16px; }
   }
-  @media (prefers-reduced-motion: reduce) { .fill { transition: none; } }
+  @media (prefers-reduced-motion: reduce) { .drawer, .scrim { transition: none; } }
 </style>
 </head>
 <body>
-<div class="frame">
-  <!-- sidebar -->
-  <aside class="side" aria-label="Main">
-    <div class="brand"><i>J</i>Jobber</div>
-    <button class="new" type="button">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M8 3v10M3 8h10"/></svg>
-      New resume
+<header class="head">
+  <div class="head-in">
+    <a class="brand" href="#"><i>J</i>Jobber</a>
+    <nav class="links" aria-label="Main">
+      <a href="#" aria-current="page">Dashboard</a>
+      <a href="#">Resumes</a>
+      <a href="#">Jobs</a>
+    </nav>
+    <div class="head-right">
+      <a class="btn primary" href="#" aria-label="New resume">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M8 3v10M3 8h10"/></svg>
+        <span class="new-label">New resume</span>
+      </a>
+      <button class="btn menu-btn" type="button" id="open" aria-label="Open menu" aria-expanded="false" aria-controls="menu">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M2.5 4h11M2.5 8h11M2.5 12h11"/></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main class="page">
+  <h1>Good morning, Syed</h1>
+  <p class="lead"><b>6 new jobs</b> match your resumes today.</p>
+
+  <div class="nums">
+    <a class="num" href="#"><b>24</b><span>New<span class="wide-only"> matches</span></span></a>
+    <a class="num" href="#"><b>9</b><span>Applied</span></a>
+    <a class="num" href="#"><b>2</b><span>Interviews</span></a>
+  </div>
+
+  <section class="card">
+    <div class="card-h"><h2>Today's best matches</h2><a href="#">See all 24 →</a></div>
+    <div id="jobs"></div>
+  </section>
+  <p class="note">Design preview with sample data. Company names show the target list only; no real postings.</p>
+</main>
+
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="menu" aria-label="Menu" aria-hidden="true">
+  <div class="drawer-h">
+    <a class="brand" href="#"><i>J</i>Jobber</a>
+    <button class="btn menu-btn" type="button" id="close" aria-label="Close menu">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg>
     </button>
-    <div class="group">WORKSPACE</div>
-    <a class="nav on" href="#"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="6" height="6" rx="1.5"/><rect x="11" y="3" width="6" height="6" rx="1.5"/><rect x="3" y="11" width="6" height="6" rx="1.5"/><rect x="11" y="11" width="6" height="6" rx="1.5"/></svg>Dashboard</a>
-    <a class="nav" href="#"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 2.5h6l3.5 3.5v11a1 1 0 01-1 1h-8.5a1 1 0 01-1-1v-13.5a1 1 0 011-1z"/><path d="M8 10h5M8 13h5"/></svg>Resumes <span class="n">4</span></a>
-    <a class="nav" href="#"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2.5" y="6" width="15" height="11" rx="2"/><path d="M7 6V4.5a1 1 0 011-1h4a1 1 0 011 1V6"/></svg>Jobs <span class="n">24</span></a>
-    <a class="nav" href="#"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2.5" y="3" width="4.5" height="14" rx="1.2"/><rect x="9" y="3" width="4.5" height="9" rx="1.2"/><rect x="15.5" y="3" width="2" height="6" rx="1"/></svg>Applications <span class="n">9</span></a>
-    <div class="group">ACCOUNT</div>
-    <a class="nav" href="#"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="2.6"/><path d="M10 2.5v2M10 15.5v2M2.5 10h2M15.5 10h2M4.7 4.7l1.4 1.4M13.9 13.9l1.4 1.4M4.7 15.3l1.4-1.4M13.9 6.1l1.4-1.4"/></svg>Settings</a>
+  </div>
+  <div class="drawer-b">
+    <div class="group">Go to</div>
+    <a class="item" href="#" aria-current="page"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="6" height="6" rx="1.5"/><rect x="11" y="3" width="6" height="6" rx="1.5"/><rect x="3" y="11" width="6" height="6" rx="1.5"/><rect x="11" y="11" width="6" height="6" rx="1.5"/></svg>Dashboard</a>
+    <a class="item" href="#"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 2.5h6l3.5 3.5v11a1 1 0 01-1 1h-8.5a1 1 0 01-1-1v-13.5a1 1 0 011-1z"/><path d="M8 10h5M8 13h5"/></svg>Resumes<span class="n">4</span></a>
+    <a class="item" href="#"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2.5" y="6" width="15" height="11" rx="2"/><path d="M7 6V4.5a1 1 0 011-1h4a1 1 0 011 1V6"/></svg>Jobs<span class="n">24</span></a>
+    <a class="item" href="#"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2.5" y="3" width="4.5" height="14" rx="1.2"/><rect x="9" y="3" width="4.5" height="9" rx="1.2"/><rect x="15.5" y="3" width="2" height="6" rx="1"/></svg>Applications<span class="n">9</span></a>
 
+    <div class="group">Daily search</div>
     <div class="run">
-      <b><span class="dot" aria-hidden="true"></span>Daily search</b>
-      <p>Next run tomorrow, 07:00 IST</p>
-      <div class="meter" aria-hidden="true"><i></i></div>
-      <small>38 of 40 sources healthy</small>
-    </div>
-  </aside>
-
-  <main class="main">
-    <!-- top bar -->
-    <div class="top">
-      <div class="search"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7" cy="7" r="4.6"/><path d="M10.5 10.5 14 14" stroke-linecap="round"/></svg>Search jobs, resumes, companies<span class="kbd">⌘K</span></div>
-      <span class="last">Last run today, 07:02</span>
-      <button class="icon" type="button" aria-label="Notifications, 6 new"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 8a5 5 0 0110 0v3.5l1.5 2.5h-13L5 11.5V8z"/><path d="M8.2 16.5a2 2 0 003.6 0"/></svg><span class="badge-dot"></span></button>
-      <span class="avatar" aria-label="Account">SM</span>
+      <b><span class="dot" aria-hidden="true"></span>Running every day at 07:00</b>
+      <p>Last run today, 07:02 · 38 of 40 sources working</p>
+      <button class="btn sm" type="button">Run search now</button>
     </div>
 
-    <!-- greeting -->
-    <div class="hello">
-      <div>
-        <h1>Good morning, Syed</h1>
-        <p><b>6 new matches</b> since yesterday. 2 of them are strong fits for your Backend SDE resume.</p>
-      </div>
-      <button class="btn" type="button"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M13.5 8A5.5 5.5 0 113 5"/><path d="M3 2v3h3"/></svg>Run search now</button>
-    </div>
-
-    <!-- stat strip -->
-    <section class="card stats" aria-label="Summary">
-      <div class="stat"><span>New matches</span><b>24</b><small><span class="delta up">+6</span>since yesterday</small></div>
-      <div class="stat"><span>Applied this week</span><b>9</b><small><span class="delta up">+3</span>vs last week</small></div>
-      <div class="stat"><span>Interviews</span><b>2</b><small><span class="delta flat">0</span>this week</small></div>
-      <div class="stat"><span>Average match</span><b>71</b><small><span class="delta down">−2</span>vs last week</small></div>
-    </section>
-
-    <!-- chart and gauge -->
-    <div class="row">
-      <section class="card">
-        <div class="card-h">
-          <h2>New matches</h2><span class="sub" id="chart-sub">Last 7 days</span>
-          <div class="right"><div class="seg" role="group" aria-label="Range"><button type="button" aria-pressed="true" data-r="w">Week</button><button type="button" aria-pressed="false" data-r="m">Month</button></div></div>
-        </div>
-        <div class="chart">
-          <div class="yax" id="yax"></div>
-          <div class="bars" id="bars"></div>
-        </div>
-      </section>
-
-      <section class="card">
-        <div class="card-h"><h2>Average match</h2><span class="sub">across 24 jobs</span></div>
-        <div class="gauge">
-          <svg viewBox="0 0 240 132" id="gauge" role="img" aria-label="Average match 71 out of 100"></svg>
-          <div class="g-val"><b>71<sup>/100</sup></b><span>Best resume: Backend SDE</span></div>
-          <div class="bands">
-            <div class="band"><i style="background:var(--success)"></i>Strong fit, 80 and above<b>6</b></div>
-            <div class="band"><i style="background:var(--primary)"></i>Good fit, 60 to 79<b>11</b></div>
-            <div class="band"><i style="background:var(--warning)"></i>Partial fit, 40 to 59<b>7</b></div>
-          </div>
-        </div>
-      </section>
-    </div>
-
-    <!-- matches and next steps -->
-    <div class="row">
-      <section class="card">
-        <div class="card-h">
-          <h2>Top matches</h2>
-          <div class="right pills" role="group" aria-label="Filter by category" id="pills">
-            <button class="pill" type="button" aria-pressed="true" data-c="all">All <em>24</em></button>
-            <button class="pill" type="button" aria-pressed="false" data-c="intern">Internships <em>15</em></button>
-            <button class="pill" type="button" aria-pressed="false" data-c="grad">New grad <em>5</em></button>
-            <button class="pill" type="button" aria-pressed="false" data-c="ml">ML / AI <em>4</em></button>
-          </div>
-        </div>
-        <div class="tbl-wrap">
-          <table>
-            <thead><tr><th>Role</th><th>Match</th><th>Use resume</th><th></th></tr></thead>
-            <tbody id="rows"></tbody>
-          </table>
-        </div>
-        <div class="foot"><span>Every link was checked live this morning.</span><a href="#">View all jobs →</a></div>
-      </section>
-
-      <section class="card">
-        <div class="card-h"><h2>Next steps</h2><span class="sub">suggested</span></div>
-        <div class="steps">
-          <button class="step" type="button"><span class="ic"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 2.5l1.8 4.7 4.7 1.8-4.7 1.8L10 15.5l-1.8-4.7L3.5 9l4.7-1.8z"/></svg></span><span><b>Tailor Backend SDE for Atlassian</b><small>2 missing keywords: Kafka, system design</small></span><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 3l5 5-5 5"/></svg></button>
-          <button class="step" type="button"><span class="ic warn"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="7"/><path d="M10 6v4l2.5 2"/></svg></span><span><b>Follow up with Razorpay</b><small>Applied 8 days ago, no reply yet</small></span><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 3l5 5-5 5"/></svg></button>
-          <button class="step" type="button"><span class="ic"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 16l1-4 8.5-8.5a2 2 0 013 3L8 15l-4 1z"/></svg></span><span><b>Add numbers to 3 bullets</b><small>ML / AI Intern resume, Experience</small></span><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 3l5 5-5 5"/></svg></button>
-          <button class="step" type="button"><span class="ic ok"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 10.5l4 4 8-9"/></svg></span><span><b>Prepare for Postman interview</b><small>Thursday, 11:00 IST</small></span><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 3l5 5-5 5"/></svg></button>
-        </div>
-      </section>
-    </div>
-    <p class="note">Design preview with sample data. Company names show the target list only; no real postings or personal details.</p>
-  </main>
-</div>
+    <div class="group">Settings</div>
+    <a class="item" href="#"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 17V7l7-4 7 4v10"/><path d="M8 17v-5h4v5"/></svg>Companies and sources</a>
+    <a class="item" href="#"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 17s-5.5-4.6-5.5-9a5.5 5.5 0 0111 0c0 4.4-5.5 9-5.5 9z"/><circle cx="10" cy="8" r="2"/></svg>Roles and locations</a>
+    <a class="item" href="#"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 8a5 5 0 0110 0v3.5l1.5 2.5h-13L5 11.5V8z"/><path d="M8.2 16.5a2 2 0 003.6 0"/></svg>Telegram alerts</a>
+  </div>
+  <div class="drawer-f">
+    <span class="avatar">SM</span><span class="who">Syed</span>
+    <a class="btn sm" href="#">Sign out</a>
+  </div>
+</aside>
 
 <script>
-  // chart: grey bars, today in blue
-  const ranges = {
-    w: { sub: 'Last 7 days', labels: ['Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun', 'Today'], data: [4, 7, 3, 9, 2, 5, 6] },
-    m: { sub: 'Last 4 weeks', labels: ['26 Oct', '2 Nov', '9 Nov', 'This week'], data: [18, 26, 21, 24] },
-  }
-  const bars = document.getElementById('bars')
-  const yax = document.getElementById('yax')
-  function drawChart(r) {
-    const { sub, labels, data } = ranges[r]
-    document.getElementById('chart-sub').textContent = sub
-    const max = Math.ceil(Math.max(...data) / 4) * 4 || 4
-    yax.innerHTML = [4, 3, 2, 1, 0].map((k) => `<span>${(max / 4) * k}</span>`).join('')
-    bars.innerHTML = data.map((v, i) => `
-      <div class="bar${i === data.length - 1 ? ' today' : ''}">
-        <div class="track"><div class="fill" style="height:0%"></div><span class="tip" style="bottom:calc(${(v / max) * 100}% + 6px)">${v} new</span></div>
-        <span class="lbl">${labels[i]}</span>
-      </div>`).join('')
-    requestAnimationFrame(() => bars.querySelectorAll('.fill').forEach((f, i) => (f.style.height = (data[i] / max) * 100 + '%')))
-  }
-  document.querySelectorAll('.seg button').forEach((b) => b.addEventListener('click', () => {
-    document.querySelectorAll('.seg button').forEach((x) => x.setAttribute('aria-pressed', x === b))
-    drawChart(b.dataset.r)
-  }))
-  drawChart('w')
-
-  // gauge: ticks round a half circle, filled up to the score
-  const g = document.getElementById('gauge')
-  const N = 44, score = 71, cx = 120, cy = 122, r1 = 82, r2 = 104
-  let s = ''
-  for (let i = 0; i < N; i++) {
-    const a = Math.PI - (i / (N - 1)) * Math.PI
-    const on = i / (N - 1) <= score / 100
-    const tip = on && (i + 1) / (N - 1) > score / 100
-    s += `<line x1="${cx + Math.cos(a) * r1}" y1="${cy - Math.sin(a) * r1}" x2="${cx + Math.cos(a) * (tip ? r2 + 8 : r2)}" y2="${cy - Math.sin(a) * (tip ? r2 + 8 : r2)}" stroke="${on ? (tip ? '#1d4ed8' : '#2563eb') : '#dfe5ee'}" stroke-width="${tip ? 4 : 3.2}" stroke-linecap="round"/>`
-  }
-  g.innerHTML = s
-
-  // matches table, filtered by the pills
   const jobs = [
-    ['A', 'Graduate Software Engineer', 'Atlassian', 'Bengaluru · Hybrid', '1d', 92, 'Backend SDE', 'grad'],
-    ['G', 'Software Engineering Intern, Summer 2027', 'Google', 'Hyderabad', '2d', 88, 'Backend SDE', 'intern'],
-    ['P', 'ML Engineer Intern', 'PhonePe', 'Bengaluru', '1d', 84, 'ML / AI Intern', 'ml intern'],
-    ['F', 'SDE Intern', 'Flipkart', 'Bengaluru', '3d', 77, 'Full-stack', 'intern'],
-    ['P', 'Applied AI Intern, Voice', 'Postman', 'Remote · India', '2d', 74, 'GenAI / Voice', 'ml intern'],
-    ['M', 'Software Engineer, New Grad', 'Microsoft', 'Hyderabad', '4d', 66, 'Backend SDE', 'grad'],
+    ['A', 'Graduate Software Engineer', 'Atlassian', 'Bengaluru', 92],
+    ['G', 'Software Engineering Intern', 'Google', 'Hyderabad', 88],
+    ['P', 'ML Engineer Intern', 'PhonePe', 'Bengaluru', 84],
+    ['F', 'SDE Intern', 'Flipkart', 'Bengaluru', 77],
+    ['P', 'Applied AI Intern', 'Postman', 'Remote, India', 74],
   ]
-  const band = (v) => (v >= 80 ? 's-strong' : v >= 60 ? 's-good' : 's-part')
-  function drawRows(c) {
-    document.getElementById('rows').innerHTML = jobs.filter((j) => c === 'all' || j[7].includes(c)).map((j) => `
-      <tr>
-        <td><div class="job"><span class="logo">${j[0]}</span><span style="min-width:0"><b>${j[1]}</b><small>${j[2]} · ${j[3]} · ${j[4]} ago</small></span></div></td>
-        <td><span class="score ${band(j[5])}">${j[5]}</span></td>
-        <td><span class="ver">${j[6]}</span></td>
-        <td style="text-align:right"><a class="btn sm" href="#">Apply <span aria-hidden="true">↗</span></a></td>
-      </tr>`).join('')
+  document.getElementById('jobs').innerHTML = jobs.map(([l, role, co, loc, s]) => `
+    <div class="job">
+      <span class="logo">${l}</span>
+      <span style="min-width:0"><b>${role}</b><small>${co} · ${loc}</small></span>
+      <span class="score"><strong class="${s >= 80 ? 'strong' : 'good'}">${s}%</strong>match</span>
+      <a class="btn sm" href="#">Apply <span aria-hidden="true">↗</span></a>
+    </div>`).join('')
+
+  // menu slider
+  const openBtn = document.getElementById('open'), menu = document.getElementById('menu')
+  const setMenu = (on) => {
+    document.body.classList.toggle('menu-open', on)
+    openBtn.setAttribute('aria-expanded', on)
+    menu.setAttribute('aria-hidden', !on)
+    if (on) document.getElementById('close').focus(); else openBtn.focus()
   }
-  document.querySelectorAll('#pills .pill').forEach((b) => b.addEventListener('click', () => {
-    document.querySelectorAll('#pills .pill').forEach((x) => x.setAttribute('aria-pressed', x === b))
-    drawRows(b.dataset.c)
-  }))
-  drawRows('all')
+  openBtn.onclick = () => setMenu(true)
+  document.getElementById('close').onclick = () => setMenu(false)
+  document.getElementById('scrim').onclick = () => setMenu(false)
+  addEventListener('keydown', (e) => e.key === 'Escape' && document.body.classList.contains('menu-open') && setMenu(false))
 </script>
 </body>
 </html>

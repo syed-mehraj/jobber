@@ -8,8 +8,7 @@ Blue and white on a dim, cool-grey background. Calm, dense enough for real work,
 
 | Token | Value | Use |
 |---|---|---|
-| `canvas` | `#E4E8EF` | the dim page behind the app frame |
-| `bg` | `#EEF1F6` | the app frame (dashboard frame uses `#F3F5F9`) |
+| `bg` | `#EEF1F6` | the dim page background behind the white cards |
 | `bg-sunken` | `#E5E9F0` | wells, the editor gutter, empty states |
 | `surface` | `#FFFFFF` | cards, panels, inputs, the resume page |
 | `surface-muted` | `#F7F9FC` | table headers, hovered rows, secondary panels |
@@ -68,8 +67,8 @@ Contrast: `text` on `surface` 17:1, `text-2` 7.4:1, `text-3` 3.4:1 (hints only, 
 
 ## 5. Components
 
-- **Sidebar** (240px, white): logo, then Dashboard, Resumes, Jobs, Applications, Settings. Active item: `primary-tint` background, `primary` text and icon, a 3px blue bar on the left. Collapses to 64px icons; becomes a drawer on phones.
-- **Top bar** (56px, on the dim canvas): page title, search (⌘K), the date of the last job run, and an account menu.
+- **Header** (64px, white, bottom hairline): logo; three links (Dashboard, Resumes, Jobs) with a blue text and underline for the current page; **New resume** (primary); a ☰ button. Below 720px the links move into the menu and New resume becomes a "+" icon.
+- **Menu slider** (340px from the right, over a dimmed page): Go to (all pages with counts, including Applications), Daily search (status and Run search now), Settings (companies and sources, roles and locations, Telegram alerts), and a footer with initials and Sign out. Closes with ×, a click outside or Esc.
 - **Cards:** white, 12px radius, `sm` shadow, 20px padding; the title row holds a title, a meta line and actions on the right.
 - **Inputs:** 36px tall, white, `border-strong`, 8px radius; the focus border turns `primary` with the ring. The label sits above at 13/500; the hint below in `text-3`; errors in `danger` with an icon.
 - **Badges:** 22px pills. Score badges use the band colours; status badges (Saved, Applied, OA, Interview, Offer, Rejected) use tints.
@@ -99,7 +98,7 @@ Controls: font size (9–11pt), line height, section spacing, margins, accent (b
 A centred white card on the dim canvas: logo, password field, primary "Sign in" (lg).
 
 ### Dashboard
-Simple by design: a greeting, one stat strip, a new-matches bar chart beside an average-match gauge, then top matches beside next steps. The app sits as a rounded frame (#F3F5F9) on a dimmer canvas (#E4E8EF). Full spec in [DASHBOARD.md](DASHBOARD.md); preview in `design/dashboard.html`.
+Minimal: a greeting and one line, three numbers (new matches, applied, interviews), and today's five best matches with Apply. Full spec in [DASHBOARD.md](DASHBOARD.md); preview in `design/dashboard.html`.
 
 ### Resumes
 A grid of resume cards (page thumbnail, name, version tag, last edited, best score), plus "New resume" (primary) and "Upload PDF" (secondary).

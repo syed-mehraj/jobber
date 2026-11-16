@@ -44,11 +44,10 @@ The UI is specified in [DESIGN.md](DESIGN.md): blue and white on a dim backgroun
 - `.gitignore`, `.env.example`, the secret-blocking pre-commit hook, `docs/PLAN.md`, `docs/DESIGN.md`, and a visual design preview at `docs/design/preview.html`.
 - Done when: the repo is pushed and still private.
 
-**0.2 Fix npm on this Mac**
-- npm hangs because this network's IPv6 route is broken; Node reaches the registry fine over IPv4. Either turn IPv6 off while installing (`networksetup -setv6off Wi-Fi`, undo with `-setv6automatic`) or route npm through a local IPv4 proxy.
-- Done when: `npm view next version` answers.
+**0.2 Fix npm on this Mac** *(done)*
+- Traffic goes through a VPN tunnel, and Node 20's automatic IPv4/IPv6 selection times out over it. Run npm with `NODE_OPTIONS="--dns-result-order=ipv4first --no-network-family-autoselection"`.
 
-**0.3 Scaffold**
+**0.3 Scaffold** *(done)*
 - Next.js (App Router, TypeScript, strict mode), Tailwind, shadcn/ui, ESLint, Prettier, Vitest, Playwright.
 - Done when: `npm run dev`, `npm run build` and `npm test` pass.
 
@@ -58,7 +57,7 @@ The UI is specified in [DESIGN.md](DESIGN.md): blue and white on a dim backgroun
 
 **1.2 Components:** Button (6 variants × 3 sizes, every state), IconButton, Input, Textarea, Select, Badge, ScoreBadge, Card, Tabs, SegmentedControl, Dialog, Drawer, Toast, Tooltip, Skeleton, EmptyState.
 
-**1.3 App shell:** sidebar, top bar, page container, a ⌘K command menu, and a phone layout.
+**1.3 App shell:** the header (Dashboard, Resumes, Jobs, New resume, ☰), the menu slider for everything else, the page container, and the phone layout.
 
 **1.4 Style guide page:** a `/styleguide` route showing every component and state.
 - Done when: it matches DESIGN.md and keyboard focus is visible everywhere.
@@ -174,7 +173,7 @@ Settings has a "Send test message" button.
 
 **9.1 Tracker:** a kanban (Saved → Applied → OA → Interview → Offer / Rejected), notes, dates, and the resume version used.
 
-**9.2 Dashboard:** built to [DASHBOARD.md](DASHBOARD.md): a greeting, a stat strip, a new-matches chart, an average-match gauge, top matches and next steps.
+**9.2 Dashboard:** built to [DASHBOARD.md](DASHBOARD.md): a greeting, three numbers and today's five best matches.
 
 **9.3 Polish:**
 - empty states and loading skeletons
