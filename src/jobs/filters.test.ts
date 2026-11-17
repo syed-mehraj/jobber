@@ -212,3 +212,42 @@ describe('abroad rules', () => {
     })
   })
 })
+
+describe('abroad junk', () => {
+  const abroad = (title: string, location: string, description = 'We sponsor visas and offer a relocation package.') =>
+    classify(p(title, location, { description }), now)
+  it('drops language gigs, local-language roles, local-student schemes and senior titles in other languages', () => {
+    expect(abroad('AI Speech Tester (German native speaker)', 'Zurich')).toMatchObject({ keep: false })
+    expect(abroad('Native Language Specialist - German', 'Remote, Germany')).toMatchObject({ keep: false })
+    expect(abroad('Python Software Entwickler (m/w/d)', 'Zürich')).toMatchObject({
+      keep: false,
+      reason: 'abroad, needs the local language',
+    })
+    expect(abroad('Junior Developer', 'Berlin', 'Fluent German required. We sponsor visas.')).toMatchObject({
+      keep: false,
+      reason: 'abroad, needs the local language',
+    })
+    expect(abroad('Développeur Backend PHP (Alternance 12 mois)', 'Rouen, France')).toMatchObject({ keep: false })
+    expect(abroad('Werkstudent Software Engineering', 'Munich')).toMatchObject({ keep: false })
+    expect(abroad('Confirmed Backend Engineer - Care', 'Paris, France')).toMatchObject({
+      keep: false,
+      reason: 'senior role',
+    })
+    expect(abroad('Java Software Architekt (m/w/d)', 'Zürich')).toMatchObject({ keep: false })
+  })
+  it('keeps an English junior role with support', () => {
+    expect(abroad('Jr. AI Engineer', 'Amsterdam, Netherlands')).toMatchObject({ keep: true })
+  })
+})
+
+describe('non-software engineering', () => {
+  it('drops propulsion, HVAC, quality-control and ServiceNow roles', () => {
+    for (const t of [
+      'AIT Propulsion Engineer',
+      'Semantic HVAC & Ontology Engineer',
+      'Quality Control Specialist (Software)',
+      'ServiceNow Engineer',
+    ])
+      expect(classify(p(t, 'Bengaluru'), now)).toMatchObject({ keep: false })
+  })
+})

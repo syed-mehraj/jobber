@@ -18,7 +18,7 @@ export type RunSummary = {
   closed: number
 }
 
-const CONCURRENCY = 8
+const CONCURRENCY = 12
 /** Minimum gap between reads of an unofficial source. */
 const UNOFFICIAL_INTERVAL_MS = 60 * 60 * 1000
 /** A run that hasn't finished after this long is treated as dead, so a crash can't block searches forever. */

@@ -13,6 +13,9 @@ import { bandText, scoreBand } from '@/lib/score'
 import { isUnofficial } from '@/jobs/unofficial'
 import { COUNTRY_FLAGS, COUNTRY_NAMES, type CountryCode } from '@/jobs/countries'
 
+/** Flags that are good news (shown in green), as opposed to cautions. */
+const GOOD_FLAGS = new Set(['Visa sponsorship offered', 'Relocation support'])
+
 /**
  * The fit panel beside the job list: why a role matched, what it asks for, how fresh it is,
  * and the one thing to do next (Apply on the company's own page).
@@ -79,12 +82,19 @@ export function JobInspector({ job, closeHref }: { job: JobDetail; closeHref?: s
                 {r}
               </li>
             ))}
-            {job.flags.map((f) => (
-              <li key={f} className="flex gap-2 text-warning">
-                <span aria-hidden="true">!</span>
-                {f}
-              </li>
-            ))}
+            {job.flags.map((f) =>
+              GOOD_FLAGS.has(f) ? (
+                <li key={f} className="flex gap-2 font-medium text-success">
+                  <span aria-hidden="true">+</span>
+                  {f}
+                </li>
+              ) : (
+                <li key={f} className="flex gap-2 text-warning">
+                  <span aria-hidden="true">!</span>
+                  {f}
+                </li>
+              ),
+            )}
           </ul>
         </Section>
 

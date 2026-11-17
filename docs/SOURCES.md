@@ -69,3 +69,14 @@ Keyword-based for now (`src/jobs/score.ts`): level (up to 32), location (up to 1
 ## Live run, 16 Nov 2026 (all sources)
 
 138 sources in about 42 seconds; 50 roles kept. Amazon 12, Harvey 5 (2027 new grad, sponsorship), Coupa 4, ServiceNow 3, and 1–2 each from Google, Workato (Hyderabad intern), Sophos, Roblox, Pure Storage, Toast and others. Microsoft and Netflix were rate-limited (HTTP 429) after repeated test runs; the hourly limit lets them recover.
+
+## Abroad (added 17 Nov 2026)
+
+The Jobs page has an **Abroad · visa or relocation** tab. Research on 23 countries (visa route for a 2027 Indian graduate, junior pay, tax, safety, friendliness, competition) is in [ABROAD.md](ABROAD.md) and drives the country guide at the top of the tab. Top five for this profile: Germany, Ireland, the Netherlands, the UAE, Denmark. The US, Switzerland and Canada are close to closed for a bachelor's graduate hired from India.
+
+Sources for roles abroad:
+- `src/jobs/catalog-international.ts`: 135 company boards in target countries on the same four public APIs, verified 17 Nov 2026 (DE 24, GB 21, US 20, CA 14, AU 8, …).
+- Arbeitnow's documented job board API with `visa_sponsorship=true` (Germany/Europe; its terms ask for a link back, so its jobs open on arbeitnow.com).
+- Every board in the main catalog, for its roles abroad.
+
+A role abroad is kept only when it offers visa sponsorship or relocation support, isn't an internship or a local-student scheme (Werkstudent, alternance), doesn't need existing work rights or the local language, and asks for under 2 years. Greenhouse descriptions are cached in memory between searches.

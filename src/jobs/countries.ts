@@ -119,6 +119,8 @@ const PLACES: [CountryCode, string[]][] = [
     [
       'netherlands',
       'the netherlands',
+      'nederland',
+      'nederlands',
       'holland',
       'amsterdam',
       'rotterdam',

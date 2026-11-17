@@ -1,3 +1,4 @@
+import { countryOf } from '../countries'
 import { fetchJson, htmlToText, toDate } from '../http'
 import type { Adapter, RawPosting } from '../types'
 
@@ -32,7 +33,8 @@ export const arbeitnow: Adapter = async () => {
         externalId: j.slug,
         company: j.company_name.trim(),
         title: j.title.trim(),
-        location: j.location ? `${j.location}, Germany` : 'Germany',
+        // Most listings are in Germany; only add the country when the location doesn't already name one.
+        location: !j.location ? 'Germany' : countryOf(j.location) ? j.location : `${j.location}, Germany`,
         url: j.url,
         postedAt: toDate(j.created_at),
         description: htmlToText(j.description),

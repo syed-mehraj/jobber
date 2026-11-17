@@ -22,3 +22,10 @@ describe('countryOf', () => {
     expect(COUNTRY_FLAGS.DE).toBe('🇩🇪')
   })
 })
+
+describe('Dutch place names', () => {
+  it('reads Nederland as the Netherlands', () => {
+    expect(countryOf('Ypenburg, Nederlands')).toBe('NL')
+    expect(countryOf('Assen, Drenthe, Nederland')).toBe('NL')
+  })
+})

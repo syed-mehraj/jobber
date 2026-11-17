@@ -15,10 +15,11 @@ export type Classified =
 const TECH =
   /\b(software|sde|swe|developer|engineer(ing)?|programmer|machine learning|ml|ai|data scien\w*|research scien\w*|researcher|applied scien\w*|data engineer|full[- ]?stack|back[- ]?end|front[- ]?end|devops|sre|android|ios|mobile)\b/i
 const NOT_TECH =
-  /\b(sales|account (executive|manager)|marketing|recruit\w*|talent|legal|counsel|finance|accountant|payroll|hr|human resources|customer|support|success|solutions? (engineer|consultant|architect)|pre-?sales|field|business|operations|program manager|product manager|project manager|designer|design|content|writer|mechanical|civil|electrical|hardware|analog|asic|rtl|rf|silicon|physical design|verification|manufacturing|quality assurance technician|technician|construction|nurse|clinical|pharma\w*|teacher|tutor|professional services|implementation|consultant|salesforce|sap|servicenow developer|admin|administrator|people systems|it support|helpdesk|ux|user research\w*)\b/i
+  /\b(sales|account (executive|manager)|marketing|recruit\w*|talent|legal|counsel|finance|accountant|payroll|hr|human resources|customer|support|success|solutions? (engineer|consultant|architect)|pre-?sales|field|business|operations|program manager|product manager|project manager|designer|design|content|writer|mechanical|civil|electrical|hardware|analog|asic|rtl|rf|silicon|physical design|verification|manufacturing|quality assurance technician|technician|construction|nurse|clinical|pharma\w*|teacher|tutor|professional services|implementation|consultant|salesforce|sap|servicenow developer|admin|administrator|people systems|it support|helpdesk|ux|user research\w*|native (language )?speaker|language specialist|linguist|annotat\w*|transcri\w*|rater|speech tester|labell?er|propulsion|hvac|avionics|mechatronic\w*|quality control|servicenow|aerospace|structural|thermal|chemical|propellants?)\b/i
 const SENIOR =
-  /\b(senior|sr\.?|staff|principal|lead|leader|manager|mgr|mgmt|management|director|dir\.?|head|intermediate|mid[- ]?level|experienced|architect|vp|vice president|chief|distinguished|expert|specialist ii|(engineer|developer|sde|swe|scientist)\s*[-–]?\s*(ii|iii|iv|2|3|4)|(ii|iii|iv)$|l[4-9]|e[4-9]|mts\s*(2|3|ii|iii)|smts|lmts|pmts)\b/i
-const INTERN = /\b(intern(ship)?|co-?op|apprentice(ship)?|trainee|summer analyst|industrial training)\b/i
+  /\b(senior|sr\.?|confirmed|confirmé|expérimenté|architekt|leiter|teamlead|staff|principal|lead|leader|manager|mgr|mgmt|management|director|dir\.?|head|intermediate|mid[- ]?level|experienced|architect|vp|vice president|chief|distinguished|expert|specialist ii|(engineer|developer|sde|swe|scientist)\s*[-–]?\s*(ii|iii|iv|2|3|4)|(ii|iii|iv)$|l[4-9]|e[4-9]|mts\s*(2|3|ii|iii)|smts|lmts|pmts)\b/i
+const INTERN =
+  /\b(intern(ship)?|co-?op|apprentice(ship)?|trainee|summer analyst|industrial training|werkstudent\w*|working student|alternance|alternant|apprenti\w*|ausbildung|praktik\w*|stagiaire|stage)\b/i
 const NEW_GRAD =
   /\b(new grad\w*|graduate|university|campus|early career|entry[- ]level|fresher|freshers|junior|jr\.?|associate (software|engineer|developer)|(sde|swe|engineer|developer)\s*[-–]?\s*(i|1)\b|level 1|grad(uate)? program|class of 2027|2027)\b/i
 const PAST_INTAKE = /\b20(1\d|2[0-6])\b/
@@ -28,6 +29,9 @@ const NO_SPONSOR =
   /(not (able|going) to (offer|provide) (visa )?sponsorship|unable to (offer|provide)? ?sponsor|no (visa )?sponsorship|without (the need for )?(visa )?sponsorship|(do(es)? not|don't|cannot|can't|won't|will not|are not able to) (currently )?(offer|provide|support|sponsor)( any)? ?(visa|work permit|sponsorship)?|not (currently )?(offer|provid)(ing|e)? (visa )?sponsorship|must be (legally )?authori[sz]ed to work|must (already )?have (the )?(right|authori[sz]ation) to work|u\.?s\.? citizen(ship)?|security clearance|green card|permanent resident|eu (citizen|passport)|eligible to work in the (eu|uk|us))/i
 const SPONSOR =
   /(visa sponsorship (is |will be )?(available|provided|offered|possible)|we (will|can|do|are able to|are happy to) sponsor|sponsor(ing)? (your |the |work )?visas?|sponsorship (is )?available|offer(s|ing)? (visa )?sponsorship|provide (visa )?sponsorship|visa support|work permit (support|sponsorship))/i
+/** A role abroad that needs the local language (German, French, Dutch…) isn't realistic for an English speaker. */
+const LOCAL_LANGUAGE =
+  /((fluent|native|business[- ]level|proficient|excellent|strong|very good)( (command|knowledge))?( of| in)? (german|french|dutch|swedish|danish|norwegian|finnish|japanese|italian|spanish|polish|portuguese)|(german|french|dutch|japanese)( language)?( skills)? \(?(c1|c2|b2)\b|deutschkenntnisse|deutsch (auf )?(c1|b2|fließend)|\b(entwickler|ingenieur|berater|développeur|ingénieur|ontwikkelaar|beheerder|medewerker|applicatie)\b)/i
 const RELOCATION =
   /(relocation (support|assistance|package|bonus|budget|allowance|help)|help (you )?(with )?relocat|support (your |you with |with )?relocat|relocate to (our|the|one of)|we('ll| will) (help|support)[^.]{0,40}relocat)/i
 
@@ -137,6 +141,7 @@ export function classify(p: RawPosting, now = new Date()): Classified {
     // Internships abroad need enrolment or a visa in that country; a student in India can't take them.
     if (level === 'intern') return { keep: false, reason: 'internship abroad' }
     if (blocks) return { keep: false, reason: 'abroad, needs existing work rights' }
+    if (LOCAL_LANGUAGE.test(text)) return { keep: false, reason: 'abroad, needs the local language' }
     // Abroad only when the company says it sponsors a visa or helps you relocate.
     const relocates = RELOCATION.test(text)
     if (!sponsors && !relocates) return { keep: false, reason: 'abroad without visa or relocation support' }
