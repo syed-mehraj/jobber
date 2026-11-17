@@ -15,6 +15,9 @@ export type ResumeRecord = {
   updatedAt: Date
   /** Null when the stored JSON is not a resume of the current shape. */
   content: ResumeContent | null
+  /** Raw design JSON; read it with toDesign from src/resume/design.ts. */
+  design: unknown
+  target: string | null
 }
 
 async function db() {
@@ -32,6 +35,8 @@ const toRecord = (r: Row): ResumeRecord => ({
   createdAt: r.createdAt,
   updatedAt: r.updatedAt,
   content: toContent(r.content),
+  design: r.design,
+  target: r.target,
 })
 
 /** All resumes: the master first, then the rest by most recently edited. */

@@ -9,6 +9,8 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { ResumeIcon } from '@/components/ui/icons'
 import { Skeleton } from '@/components/ui/skeleton'
 import { getResume } from '@/lib/resumes'
+import { toDesign } from '@/resume/design'
+import { resumeFontVariables } from '@/resume/fonts'
 import { ResumePage } from '@/resume/render'
 
 export const metadata: Metadata = { title: 'Resume' }
@@ -49,7 +51,7 @@ async function Viewer({ params }: { params: Promise<{ id: string }> }) {
           {resume.isMaster && <Badge tone="primary">Master</Badge>}
         </div>
         <div className="flex items-center gap-2">
-          <Link href="/resumes/new" className={buttonClass()}>
+          <Link href={`/resumes/${resume.id}/edit`} className={buttonClass({ variant: 'primary' })}>
             Edit
           </Link>
           <PrintButton />
@@ -57,8 +59,8 @@ async function Viewer({ params }: { params: Promise<{ id: string }> }) {
       </div>
       {resume.content ? (
         <div className="overflow-x-auto pb-2">
-          <div className="mx-auto w-fit shadow-card">
-            <ResumePage content={resume.content} />
+          <div className={`mx-auto w-fit shadow-card ${resumeFontVariables}`}>
+            <ResumePage content={resume.content} design={toDesign(resume.design)} />
           </div>
         </div>
       ) : (

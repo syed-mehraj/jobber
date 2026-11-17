@@ -122,6 +122,10 @@ export const resumes = pgTable('resumes', {
   name: text('name').notNull(),
   isMaster: boolean('is_master').notNull().default(false),
   content: jsonb('content').$type<Record<string, unknown>>().notNull().default({}),
+  /** Template, font and accent chosen in the editor (see src/resume/design.ts). */
+  design: jsonb('design').$type<Record<string, unknown>>().notNull().default({}),
+  /** Optional: the company or role this version is for. */
+  target: text('target'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 })

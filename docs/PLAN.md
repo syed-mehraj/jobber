@@ -90,20 +90,20 @@ Unverified numbers or dates are marked `TODO` for Syed to fill in.
 
 **3.1 Resume schema (done):** typed sections (contact, summary, experience, projects, education, skills, certifications, custom). Every item and bullet has a stable ID.
 
-**3.2 Editor state:** one store (Zustand) with undo and redo. Both panes read from it and write to it. Every field has a path, such as `experience[id].bullets[id]`.
+**3.2 Editor state (done):** one store (Zustand) with undo and redo. Both panes read from it and write to it. Every field has a path, such as `experience[id].bullets[id]`.
 
-**3.3 Left pane:** a section navigator (add, hide, reorder) and forms for each section. Bullets get a toolbar: move, delete, Improve ✦.
+**3.3 Left pane (done differently, per Syed's sketch):** the page itself is on the left and editable in place; the right column has Fonts, Resume style and a Close-up of the selected part with every field. Originally planned: a section navigator (add, hide, reorder) and forms for each section. Bullets get a toolbar: move, delete, Improve ✦.
 
-**3.4 Right pane:** the live A4 / Letter preview from the active template, scaled to fit.
+**3.4 Right pane (done: the page, scaled to fit):** the live A4 / Letter preview from the active template, scaled to fit.
 
-**3.5 Right to left:** every text node in the preview is editable in place. Clicking one focuses and outlines the matching form field, and edits flow back through the store. Dragging a section or bullet on the preview reorders it.
+**3.5 Right to left (done: click text on the page to edit it; the close-up follows):** every text node in the preview is editable in place. Clicking one focuses and outlines the matching form field, and edits flow back through the store. Dragging a section or bullet on the preview reorders it.
 
-**3.6 Saving:** autosave every 1.5s after a pause, a "Saved" indicator, and a snapshot when you leave a version.
+**3.6 Saving (done: autosave 1.2 s after a pause, ⌘S, Saved indicator, undo/redo):** autosave every 1.5s after a pause, a "Saved" indicator, and a snapshot when you leave a version.
 - Done when: an edit on either side shows on the other in under 100ms. Covered by a Playwright test.
 
 ## Phase 4: Templates, export and versions
 
-**4.1 Templates:** Simple, Compact, Classic and Modern, plus the style controls from DESIGN.md §6.
+**4.1 Templates (done: Simple, Compact, Classic, Modern, Bold, Minimal; six fonts; blue or black accent):** Simple, Compact, Classic and Modern, plus the style controls from DESIGN.md §6.
 
 **4.2 PDF export:** a print stylesheet, then the browser's Save as PDF, with fonts embedded. A check that the text in the PDF can be selected and parsed.
 
@@ -120,7 +120,7 @@ Unverified numbers or dates are marked `TODO` for Syed to fill in.
 - Gemini extracts the required and preferred skills.
 - The app shows matched and missing keywords, with Add / Skip.
 
-**5.3 AI actions:** improve a bullet, tailor a version to a job, draft a cover letter.
+**5.3 AI actions (assistant done: bottom-right box, prompt → suggested edits to accept or skip; needs GEMINI_API_KEY):** improve a bullet, tailor a version to a job, draft a cover letter.
 - Results come back as a diff to accept or reject, never applied silently.
 - Prompts require keeping to facts already in the master resume.
 - Done when: AI calls run only on the server and cost is logged per call.
