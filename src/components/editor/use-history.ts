@@ -10,7 +10,11 @@ import type { ResumeContent } from '@/resume/types'
 
 type State = { past: ResumeContent[]; present: ResumeContent; future: ResumeContent[]; lastKey: string; lastAt: number }
 
-type Action = { type: 'set'; content: ResumeContent; key?: string } | { type: 'undo' } | { type: 'redo' }
+type Action =
+  | { type: 'set'; content: ResumeContent; key?: string }
+  | { type: 'undo' }
+  | { type: 'redo' }
+  | { type: 'reset'; content: ResumeContent }
 
 const LIMIT = 100
 
@@ -33,6 +37,8 @@ function reducer(s: State, a: Action): State {
       if (!prev) return s
       return { past: s.past.slice(0, -1), present: prev, future: [s.present, ...s.future], lastKey: '', lastAt: 0 }
     }
+    case 'reset':
+      return { past: [], present: a.content, future: [], lastKey: '', lastAt: 0 }
     case 'redo': {
       const next = s.future[0]
       if (!next) return s
@@ -53,11 +59,14 @@ export function useHistory(initial: ResumeContent) {
   const set = useCallback((content: ResumeContent, key?: string) => dispatch({ type: 'set', content, key }), [])
   const undo = useCallback(() => dispatch({ type: 'undo' }), [])
   const redo = useCallback(() => dispatch({ type: 'redo' }), [])
+  /** Replace the content and clear the undo history (Discard changes). */
+  const reset = useCallback((content: ResumeContent) => dispatch({ type: 'reset', content }), [])
   return {
     content: state.present,
     set,
     undo,
     redo,
+    reset,
     canUndo: state.past.length > 0,
     canRedo: state.future.length > 0,
   }

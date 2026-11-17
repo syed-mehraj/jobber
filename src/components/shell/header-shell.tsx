@@ -11,7 +11,7 @@ import { headerLinks } from './nav'
 export function HeaderShell() {
   return (
     <header className="sticky top-0 z-10 border-b border-line bg-surface">
-      <div className="mx-auto flex h-16 max-w-[1160px] items-center gap-3 px-4 sm:px-5 md:gap-7">
+      <div className="mx-auto flex h-16 max-w-[1160px] items-center gap-3 px-4 sm:px-5 md:gap-7 [body:has(.editor-wide)_&]:max-w-none">
         <Brand />
         <nav aria-label="Main" className="hidden h-full gap-1 md:flex">
           {headerLinks.map(({ href, label }) => (

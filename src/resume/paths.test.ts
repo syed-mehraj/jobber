@@ -61,3 +61,18 @@ describe('paths', () => {
     expect(end.content.experience.items[0].bullets.at(-1)?.text).toBe('')
   })
 })
+
+describe('selection scopes', () => {
+  it('fieldsOf a single line returns just that line; of a section, every entry', () => {
+    expect(fieldsOf(m, b1)).toHaveLength(1)
+    expect(fieldsOf(m, b1)[0].label).toBe('Bullet 1')
+    const section = fieldsOf(m, 'experience')
+    expect(section.length).toBe(m.experience.items.flatMap((i) => fieldsOf(m, `experience.${i.id}`)).length)
+    expect(fieldsOf(m, 'skills').length).toBeGreaterThan(5)
+  })
+  it('labels lines with their entry', () => {
+    expect(blockLabel(m, b1)).toBe(`Experience · ${exp.company} · Bullet 1`)
+    expect(blockLabel(m, 'contact.name')).toBe('Contact · Name')
+    expect(blockLabel(m, 'experience')).toBe('Experience')
+  })
+})

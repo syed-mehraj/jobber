@@ -22,7 +22,9 @@ export default function AppLayout({ children }: LayoutProps<'/'>) {
           </Suspense>
         </Suspense>
       </MenuStateProvider>
-      <main className="mx-auto max-w-[1160px] px-4 pt-7 pb-16 sm:px-5 sm:pt-9">{children}</main>
+      <main className="mx-auto max-w-[1160px] px-4 pt-7 pb-16 has-[.editor-wide]:max-w-none has-[.editor-wide]:pt-4 sm:px-5 sm:pt-9">
+        {children}
+      </main>
     </>
   )
 }

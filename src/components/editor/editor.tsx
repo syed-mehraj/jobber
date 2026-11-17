@@ -7,28 +7,27 @@ import { Button, buttonClass, iconButtonClass } from '@/components/ui/button'
 import { cx } from '@/lib/cx'
 import type { ResumeDesign } from '@/resume/design'
 import { addItem, ADDABLE, type AddableSection } from '@/resume/edit-ops'
-import { addBulletAfter, blockOf, getAt, removeBullet, setAt } from '@/resume/paths'
+import { addBulletAfter, getAt, removeBullet, setAt } from '@/resume/paths'
 import { ResumePage } from '@/resume/render'
 import type { ResumeContent } from '@/resume/types'
 import { AiAssistant, type AskFn } from './ai-assistant'
-import { CloseUp } from './closeup'
+import { CloseUp, scopeOf } from './closeup'
 import { FontPanel, StylePanel } from './design-panels'
 import { useHistory } from './use-history'
 
-type Initial = { content: ResumeContent; design: ResumeDesign; name: string; target: string }
+type Draft = { content: ResumeContent; design: ResumeDesign; name: string; target: string }
 type SaveFn = (
   id: number,
   input: { content: unknown; design: unknown; name: string; target: string },
 ) => Promise<SaveResult>
 
-type SaveState = 'saved' | 'unsaved' | 'saving' | 'error'
-
 const PAGE_WIDTH = 794
+const LIST_SECTIONS = ['experience', 'projects', 'education', 'skills', 'certifications']
 
 /**
- * The resume editor, laid out as sketched: the page on the left, where any text can be clicked and
- * edited in place; on the right, fonts, styles and a close-up of the part being edited; and a small AI
- * assistant at the bottom right. Everything edits one store, so the page and the close-up stay in sync.
+ * The resume editor. The page fills the left (zoomable) and every edit is on the right: fonts, styles and a
+ * close-up of what you selected: one line, one entry, or a whole section (click its heading). A small AI
+ * assistant sits at the bottom right. Changes are a draft until you press Save.
  */
 export function Editor({
   id,
@@ -40,43 +39,94 @@ export function Editor({
 }: {
   id: number
   isMaster: boolean
-  initial: Initial
+  initial: Draft
   save: SaveFn
   ask: AskFn
   remove?: (id: number) => Promise<void>
 }) {
   const history = useHistory(initial.content)
-  const { content, set, undo, redo } = history
+  const { content, set, undo, redo, reset } = history
   const [design, setDesign] = useState<ResumeDesign>(initial.design)
   const [name, setName] = useState(initial.name)
   const [target, setTarget] = useState(initial.target)
   const [selected, setSelected] = useState<string | null>(null)
-  const [saveState, setSaveState] = useState<SaveState>('saved')
-  const [saveError, setSaveError] = useState<string | null>(null)
 
-  // The latest content, for event handlers that must not re-bind on every keystroke.
   const contentRef = useRef(content)
   useLayoutEffect(() => {
     contentRef.current = content
   }, [content])
 
+  /* ---------- saving: a draft until Save ---------- */
+
+  const [saved, setSaved] = useState<Draft>(initial)
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const [justSaved, setJustSaved] = useState(false)
+  const dirty = content !== saved.content || design !== saved.design || name !== saved.name || target !== saved.target
+
+  const saveNow = useCallback(async () => {
+    if (saving) return
+    setSaving(true)
+    const draft = { content: contentRef.current, design, name, target }
+    const res = await save(id, draft)
+    setSaving(false)
+    if (res.ok) {
+      setSaved(draft)
+      setSaveError(null)
+      setJustSaved(true)
+      setTimeout(() => setJustSaved(false), 2000)
+    } else setSaveError(res.error)
+  }, [save, id, design, name, target, saving])
+
+  const discard = () => {
+    if (!window.confirm('Discard your changes since the last save?')) return
+    reset(saved.content)
+    setDesign(saved.design)
+    setName(saved.name)
+    setTarget(saved.target)
+    setSaveError(null)
+  }
+
+  useEffect(() => {
+    const warn = (e: BeforeUnloadEvent) => {
+      if (dirty) e.preventDefault()
+    }
+    const keys = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault()
+        void saveNow()
+      }
+    }
+    window.addEventListener('beforeunload', warn)
+    window.addEventListener('keydown', keys)
+    return () => {
+      window.removeEventListener('beforeunload', warn)
+      window.removeEventListener('keydown', keys)
+    }
+  }, [dirty, saveNow])
+
+  /** Leaving with unsaved changes asks first. */
+  const guard = (e: { preventDefault: () => void }) => {
+    if (dirty && !window.confirm('You have unsaved changes. Leave without saving?')) e.preventDefault()
+  }
+
   /* ---------- in-place editing on the page ---------- */
 
-  // While a field on the page is focused, the page keeps showing the text it had when focus started, so React
-  // never rewrites the text under the caret. The store (and the close-up) get every keystroke.
+  // While a field on the page is focused, the page keeps the text it had when focus started, so React never
+  // rewrites the text under the caret. The store (and the close-up) get every keystroke.
   const [focused, setFocused] = useState<{ path: string; snapshot: string } | null>(null)
   const [pageKey, setPageKey] = useState(0)
   const needsRemount = useRef(false)
   const pendingFocus = useRef<{ path: string; atEnd: boolean } | null>(null)
-  const canvasRef = useRef<HTMLDivElement>(null)
+  const pageRef = useRef<HTMLDivElement>(null)
 
   const display = useMemo(
     () => (focused ? setAt(content, focused.path, focused.snapshot) : content),
     [content, focused],
   )
 
-  const editableAt = (target: EventTarget | null) => {
-    const el = (target as HTMLElement | null)?.closest?.('[data-path]') as HTMLElement | null
+  const editableAt = (t: EventTarget | null) => {
+    const el = (t as HTMLElement | null)?.closest?.('[data-path]') as HTMLElement | null
     return el && el.isContentEditable ? el : null
   }
 
@@ -92,8 +142,8 @@ export function Editor({
     const el = editableAt(e.target)
     if (!el) return
     setFocused((f) => (f?.path === el.dataset.path ? null : f))
-    // If the browser removed the text node (the field was emptied), rebuild the page so React owns it again.
     if (needsRemount.current) {
+      // The field was emptied and the browser dropped its text node: rebuild the page so React owns it again.
       needsRemount.current = false
       const next = editableAt(e.relatedTarget)
       if (next) pendingFocus.current = { path: next.dataset.path!, atEnd: true }
@@ -105,9 +155,8 @@ export function Editor({
     const el = editableAt(e.target)
     if (!el) return
     const path = el.dataset.path!
-    const multiline = path === 'summary.text'
     let value = (el.textContent ?? '').replace(/ /g, ' ')
-    if (!multiline) value = value.replace(/\n/g, ' ')
+    if (path !== 'summary.text') value = value.replace(/\n/g, ' ')
     if (value === '') needsRemount.current = true
     set(setAt(contentRef.current, path, value), path)
   }
@@ -116,36 +165,31 @@ export function Editor({
     const el = editableAt(e.target)
     if (!el) return
     const path = el.dataset.path!
-    const mod = e.metaKey || e.ctrlKey
-    if (mod && e.key.toLowerCase() === 'z') {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') {
       e.preventDefault()
       el.blur()
       if (e.shiftKey) redo()
       else undo()
       return
     }
-    if (e.key === 'Escape') {
-      el.blur()
-      return
-    }
+    if (e.key === 'Escape') return el.blur()
     if (e.key === 'Enter' && !(path === 'summary.text' && e.shiftKey)) {
       e.preventDefault()
       if (path.includes('.bullets.')) {
-        // Enter in a bullet starts a new bullet below it.
         const added = addBulletAfter(contentRef.current, path)
         if (added) {
           set(added.content)
           pendingFocus.current = { path: added.path, atEnd: true }
-          el.blur()
         }
-      } else el.blur()
+      }
+      el.blur()
       return
     }
     if (e.key === 'Backspace' && (el.textContent ?? '') === '' && path.includes('.bullets.')) {
-      // Backspace in an empty bullet removes it and moves to the bullet above.
       e.preventDefault()
-      const siblings = Array.from(
-        canvasRef.current?.querySelectorAll<HTMLElement>(`[data-path^="${path.replace(/[^.]+$/, '')}"]`) ?? [],
+      const prefix = path.replace(/[^.]+$/, '')
+      const siblings = Array.from(pageRef.current?.querySelectorAll<HTMLElement>('[data-path]') ?? []).filter((x) =>
+        x.dataset.path!.startsWith(prefix),
       )
       const i = siblings.indexOf(el)
       const prev = i > 0 ? siblings[i - 1].dataset.path : undefined
@@ -158,15 +202,18 @@ export function Editor({
 
   const onClick = (e: React.MouseEvent) => {
     if (editableAt(e.target)) return
-    const block = (e.target as HTMLElement).closest('[data-block]') as HTMLElement | null
+    const t = e.target as HTMLElement
+    // A section heading selects the whole section; anywhere else in an entry selects the entry.
+    const heading = t.closest('[data-path$=".heading"]') as HTMLElement | null
+    if (heading) return setSelected(heading.dataset.path!.split('.')[0])
+    const block = t.closest('[data-block]') as HTMLElement | null
     if (block) setSelected(block.dataset.block!)
   }
 
-  // Put the caret where an action asked for it (a new bullet, the field above…).
   useLayoutEffect(() => {
     const want = pendingFocus.current
-    if (!want || !canvasRef.current) return
-    const el = canvasRef.current.querySelector<HTMLElement>(`[data-path="${CSS.escape(want.path)}"]`)
+    if (!want || !pageRef.current) return
+    const el = pageRef.current.querySelector<HTMLElement>(`[data-path="${CSS.escape(want.path)}"]`)
     if (!el) return
     pendingFocus.current = null
     el.focus()
@@ -180,95 +227,59 @@ export function Editor({
     }
   })
 
-  /* ---------- page scaling ---------- */
+  /* ---------- zoom ---------- */
 
-  const [scale, setScale] = useState(1)
+  const canvasRef = useRef<HTMLDivElement>(null)
+  const [fit, setFit] = useState(1)
   const [pageHeight, setPageHeight] = useState(1123)
-  const pageRef = useRef<HTMLDivElement>(null)
+  const [zoom, setZoom] = useState<'fit' | number>('fit')
   useEffect(() => {
     const box = canvasRef.current
     const page = pageRef.current
     if (!box || !page) return
     const ro = new ResizeObserver(() => {
-      setScale(Math.min(1, box.clientWidth / PAGE_WIDTH))
+      setFit(Math.min(2, Math.max(0.3, (box.clientWidth - 2) / PAGE_WIDTH)))
       setPageHeight(page.offsetHeight)
     })
     ro.observe(box)
     ro.observe(page)
     return () => ro.disconnect()
   }, [])
+  const scale = zoom === 'fit' ? fit : zoom
+  const step = (d: number) => setZoom(Math.round(Math.min(2, Math.max(0.5, scale + d)) * 10) / 10)
 
-  /* ---------- saving ---------- */
+  /* ---------- selection ---------- */
 
-  const firstRender = useRef(true)
-  const saveNow = useCallback(async () => {
-    setSaveState('saving')
-    const res = await save(id, { content: contentRef.current, design, name, target })
-    if (res.ok) {
-      setSaveState('saved')
-      setSaveError(null)
-    } else {
-      setSaveState('error')
-      setSaveError(res.error)
-    }
-  }, [save, id, design, name, target])
-
-  useEffect(() => {
-    if (firstRender.current) {
-      firstRender.current = false
-      return
-    }
-    setSaveState('unsaved')
-    const t = setTimeout(saveNow, 1200)
-    return () => clearTimeout(t)
-  }, [content, design, name, target, saveNow])
-
-  useEffect(() => {
-    const warn = (e: BeforeUnloadEvent) => {
-      if (saveState !== 'saved') e.preventDefault()
-    }
-    const keys = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
-        e.preventDefault()
-        void saveNow()
-      }
-    }
-    window.addEventListener('beforeunload', warn)
-    window.addEventListener('keydown', keys)
-    return () => {
-      window.removeEventListener('beforeunload', warn)
-      window.removeEventListener('keydown', keys)
-    }
-  }, [saveState, saveNow])
-
-  /* ---------- selection helpers ---------- */
-
-  const block = selected
-    ? selected.includes('.') && !selected.startsWith('summary')
-      ? blockOf(selected)
-      : selected
-    : null
+  const scope = selected ? scopeOf(content, selected) : null
   const highlight = useMemo(() => {
-    const rules: string[] = [
-      // An emptied field keeps a clickable width and shows a faint hint.
+    const rules = [
       `.resume-canvas [contenteditable]:empty{display:inline-block;min-width:4em}`,
       `.resume-canvas [contenteditable]:empty::before{content:'Type here';color:#b6c0cf}`,
     ]
-    if (block)
+    if (!selected || !scope) return rules.join('\n')
+    const ring = 'outline:1.5px solid rgb(37 99 235/.55);outline-offset:3px;border-radius:3px'
+    if (scope === 'line') rules.push(`.resume-canvas [data-path="${CSS.escape(selected)}"]{${ring}}`)
+    else if (scope === 'block') rules.push(`.resume-canvas [data-block="${CSS.escape(selected)}"]{${ring}}`)
+    else
       rules.push(
-        `.resume-canvas [data-block="${CSS.escape(block)}"]{background:rgb(37 99 235/.045);box-shadow:0 0 0 6px rgb(37 99 235/.045);border-radius:4px}`,
-      )
-    if (selected && selected !== block)
-      rules.push(
-        `.resume-canvas [data-path="${CSS.escape(selected)}"]{outline:2px solid rgb(37 99 235/.5);outline-offset:2px;border-radius:2px}`,
+        `.resume-canvas [data-block^="${CSS.escape(selected)}."],.resume-canvas [data-path="${CSS.escape(selected)}.heading"]{${ring}}`,
       )
     return rules.join('\n')
-  }, [block, selected])
+  }, [selected, scope])
 
-  const selectFromCloseUp = useCallback((path: string) => {
-    setSelected(path)
-    const el = canvasRef.current?.querySelector<HTMLElement>(`[data-path="${CSS.escape(path)}"]`)
+  const select = useCallback((key: string) => {
+    setSelected(key)
+    const el =
+      pageRef.current?.querySelector(`[data-path="${CSS.escape(key)}"]`) ??
+      pageRef.current?.querySelector(`[data-block="${CSS.escape(key)}"]`) ??
+      pageRef.current?.querySelector(`[data-path="${CSS.escape(key)}.heading"]`)
     el?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+  }, [])
+
+  const peek = useCallback((path: string) => {
+    pageRef.current
+      ?.querySelector(`[data-path="${CSS.escape(path)}"]`)
+      ?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
   }, [])
 
   const add = (section: AddableSection) => {
@@ -276,7 +287,7 @@ export function Editor({
     set(r.content)
     setSelected(r.block)
     requestAnimationFrame(() =>
-      canvasRef.current
+      pageRef.current
         ?.querySelector(`[data-block="${CSS.escape(r.block)}"]`)
         ?.scrollIntoView({ block: 'center', behavior: 'smooth' }),
     )
@@ -285,11 +296,10 @@ export function Editor({
   /* ---------- layout ---------- */
 
   return (
-    <div className="pb-24">
-      {/* Toolbar */}
-      <div className="sticky top-16 z-[5] -mx-4 mb-5 border-b border-line bg-canvas/95 px-4 py-3 backdrop-blur sm:-mx-5 sm:px-5">
+    <div className="editor-wide pb-24">
+      <div className="sticky top-16 z-[5] -mx-4 mb-4 border-b border-line bg-canvas/95 px-4 py-2.5 backdrop-blur sm:-mx-5 sm:px-5">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-          <Link href="/resumes" className="text-small font-medium text-ink-2 hover:text-ink">
+          <Link href="/resumes" onClick={guard} className="text-small font-medium text-ink-2 hover:text-ink">
             ← Resumes
           </Link>
           <label className="sr-only" htmlFor="resume-name">
@@ -318,20 +328,7 @@ export function Editor({
             maxLength={120}
             className="w-56 max-w-full rounded-control border border-line bg-surface px-2.5 py-1.5 text-small"
           />
-          <span
-            className={cx('text-small', saveState === 'error' ? 'text-danger' : 'text-ink-3')}
-            aria-live="polite"
-            title={saveError ?? undefined}
-          >
-            {saveState === 'saved'
-              ? 'Saved'
-              : saveState === 'saving'
-                ? 'Saving…'
-                : saveState === 'unsaved'
-                  ? 'Unsaved'
-                  : 'Not saved'}
-          </span>
-          <span className="ml-auto flex items-center gap-1.5">
+          <span className="ml-auto flex flex-wrap items-center gap-1.5">
             <button
               type="button"
               className={iconButtonClass({ size: 'sm' })}
@@ -373,26 +370,73 @@ export function Editor({
               </svg>
             </button>
             <AddMenu onAdd={add} />
-            <Link href={`/resumes/${id}`} className={buttonClass({ size: 'sm' })}>
+            <Link href={`/resumes/${id}`} onClick={guard} className={buttonClass({ size: 'sm' })}>
               Preview &amp; PDF
             </Link>
+            {dirty && (
+              <Button size="sm" variant="ghost" onClick={discard}>
+                Discard
+              </Button>
+            )}
+            <Button
+              size="sm"
+              variant={dirty ? 'primary' : 'secondary'}
+              onClick={() => void saveNow()}
+              loading={saving}
+              disabled={!dirty && !saving}
+              title="Save (⌘S)"
+            >
+              {saving ? 'Saving' : dirty ? 'Save' : justSaved ? 'Saved ✓' : 'Saved'}
+            </Button>
           </span>
         </div>
+        {saveError && (
+          <p className="mt-1.5 text-small text-danger" role="alert">
+            Not saved: {saveError}
+          </p>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-12">
-        {/* The page: click any text to edit it */}
-        <div className="min-w-0 lg:col-span-7">
-          <p className="mb-2 text-caption text-ink-3">
-            Click any text to edit it. Enter adds a bullet; Backspace on an empty bullet removes it.
-          </p>
-          <div ref={canvasRef} className="resume-canvas w-full">
+      <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(380px,440px)]">
+        {/* The page: fills the left, zoomable */}
+        <div className="min-w-0">
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-caption text-ink-3">
+              Click a line to edit it, a heading for the whole section. Enter adds a bullet.
+            </p>
+            <div className="flex items-center gap-1" role="group" aria-label="Zoom">
+              <button
+                type="button"
+                className={iconButtonClass({ size: 'sm' })}
+                onClick={() => step(-0.1)}
+                aria-label="Zoom out"
+              >
+                −
+              </button>
+              <span className="w-12 text-center text-small text-ink-2 tabular-nums">{Math.round(scale * 100)}%</span>
+              <button
+                type="button"
+                className={iconButtonClass({ size: 'sm' })}
+                onClick={() => step(0.1)}
+                aria-label="Zoom in"
+              >
+                +
+              </button>
+              <Button size="sm" variant={zoom === 'fit' ? 'subtle' : 'ghost'} onClick={() => setZoom('fit')}>
+                Fit
+              </Button>
+              <Button size="sm" variant={zoom === 1 ? 'subtle' : 'ghost'} onClick={() => setZoom(1)}>
+                100%
+              </Button>
+            </div>
+          </div>
+          <div ref={canvasRef} className="resume-canvas w-full overflow-x-auto">
             <style>{highlight}</style>
-            <div style={{ height: pageHeight * scale }} className="overflow-hidden">
+            <div className="mx-auto" style={{ width: PAGE_WIDTH * scale, height: pageHeight * scale }}>
               <div
                 ref={pageRef}
                 style={{ width: PAGE_WIDTH, transform: `scale(${scale})`, transformOrigin: 'top left' }}
-                className="rounded-[4px] shadow-[0_1px_3px_rgb(15_23_42/.08),0_8px_28px_rgb(15_23_42/.08)] [&_[contenteditable]]:cursor-text [&_[contenteditable]]:rounded-[2px] [&_[contenteditable]]:outline-none [&_[contenteditable]:focus]:bg-primary-tint/50 [&_[contenteditable]:hover]:bg-primary-tint/40"
+                className="shadow-[0_1px_3px_rgb(15_23_42/.08),0_8px_28px_rgb(15_23_42/.08)] [&_[contenteditable]]:cursor-text [&_[contenteditable]]:rounded-[2px] [&_[contenteditable]]:outline-none [&_[contenteditable]:focus]:outline-[1.5px] [&_[contenteditable]:focus]:outline-offset-2 [&_[contenteditable]:focus]:outline-primary [&_[contenteditable]:focus]:outline-solid [&_[contenteditable]:hover]:outline-1 [&_[contenteditable]:hover]:outline-offset-2 [&_[contenteditable]:hover]:outline-primary/30 [&_[contenteditable]:hover]:outline-dashed [&_[data-path$='.heading']]:cursor-pointer"
                 onFocus={onFocus}
                 onBlur={onBlur}
                 onInput={onInput}
@@ -405,23 +449,25 @@ export function Editor({
           </div>
         </div>
 
-        {/* Fonts, styles and the close-up */}
-        <div className="grid gap-4 lg:sticky lg:top-[140px] lg:col-span-5 lg:max-h-[calc(100dvh-160px)] lg:overflow-y-auto lg:pb-2">
+        {/* Every edit, on the right */}
+        <div className="grid min-w-0 gap-4 lg:sticky lg:top-[132px] lg:max-h-[calc(100dvh-148px)] lg:overflow-y-auto lg:pr-1 lg:pb-2">
+          <CloseUp
+            content={content}
+            design={design}
+            selected={selected}
+            onChange={(next, key) => set(next, key)}
+            onSelect={select}
+            onPeek={peek}
+            dirty={dirty}
+            saving={saving}
+            onSave={() => void saveNow()}
+          />
           <FontPanel value={design.font} onChange={(font) => setDesign({ ...design, font })} />
           <StylePanel
             content={content}
             design={design}
             onChange={(template) => setDesign({ ...design, template })}
             onAccent={(accent) => setDesign({ ...design, accent })}
-          />
-          <CloseUp
-            content={content}
-            design={design}
-            block={block}
-            selected={selected}
-            onChange={(next, key) => set(next, key)}
-            onSelect={selectFromCloseUp}
-            onSelectBlock={setSelected}
           />
           {!isMaster && remove && <DeleteResume onDelete={() => remove(id)} />}
         </div>
@@ -430,7 +476,9 @@ export function Editor({
       <AiAssistant
         resumeId={id}
         content={content}
-        block={block}
+        block={
+          selected && (scope === 'line' || scope === 'block' || LIST_SECTIONS.includes(selected)) ? selected : null
+        }
         ask={ask}
         onApply={(path, value) => set(setAt(contentRef.current, path, value), `ai:${path}`)}
       />

@@ -117,7 +117,22 @@ const LABELS: Record<string, string> = {
 
 /** Every editable field in a block, in reading order, for the close-up editor. */
 export function fieldsOf(content: ResumeContent, block: string): FieldInfo[] {
+  // A single line: just that field.
+  const single = getAt(content, block)
+  if (single !== undefined) {
+    const all = fieldsOf(content, blockOf(block))
+    const f = all.find((x) => x.path === block)
+    return f ? [f] : [{ path: block, label: 'Text', multiline: single.length > 60, value: single }]
+  }
   const [section, id] = block.split('.') as [SectionKey, string | undefined]
+  // A whole list section ("experience", "skills"…): every entry's fields.
+  if (!id && ['experience', 'projects', 'education', 'certifications', 'skills'].includes(section)) {
+    const ids =
+      section === 'skills'
+        ? content.skills.groups.map((g) => g.id)
+        : (content[section] as { items: { id: string }[] }).items.map((i) => i.id)
+    return ids.flatMap((i) => fieldsOf(content, `${section}.${i}`))
+  }
   const out: FieldInfo[] = []
   const push = (path: string, label: string, multiline = false) => {
     const value = getAt(content, path)
@@ -153,6 +168,11 @@ export function fieldsOf(content: ResumeContent, block: string): FieldInfo[] {
 
 /** A human name for a block: "Experience · Parcera", "Skills · Languages", "Summary". */
 export function blockLabel(content: ResumeContent, block: string): string {
+  if (getAt(content, block) !== undefined) {
+    const field = fieldsOf(content, block)[0]
+    const parent = blockOf(block)
+    return parent === block ? (field?.label ?? 'Line') : `${blockLabel(content, parent)} · ${field?.label ?? 'Line'}`
+  }
   const [section, id] = block.split('.')
   const title = section.charAt(0).toUpperCase() + section.slice(1)
   if (!id) return section === 'custom' ? content.custom.title || 'Additional' : title
