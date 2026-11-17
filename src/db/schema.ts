@@ -1,5 +1,16 @@
 import { sql } from 'drizzle-orm'
-import { boolean, index, integer, jsonb, pgTable, serial, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core'
+import {
+  boolean,
+  customType,
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  serial,
+  text,
+  timestamp,
+  uniqueIndex,
+} from 'drizzle-orm/pg-core'
 
 /**
  * Where jobs come from. One row per company board (Greenhouse, Lever, Ashby, SmartRecruiters, Workday),
@@ -145,6 +156,20 @@ export const abouts = pgTable('abouts', {
   text: text('text').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
+/** Raw bytes (Postgres bytea). PGlite and node-postgres both hand back a Uint8Array/Buffer. */
+const bytea = customType<{ data: Uint8Array; driverData: Uint8Array }>({ dataType: () => 'bytea' })
+
+/** Uploaded resume files (the original PDF/Word), kept next to the editable copy made from them. */
+export const resumeFiles = pgTable('resume_files', {
+  id: serial('id').primaryKey(),
+  resumeId: integer('resume_id').references(() => resumes.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  mime: text('mime').notNull(),
+  size: integer('size').notNull(),
+  data: bytea('data').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
 /** Small key/value settings: the matching profile, the last dashboard visit… */

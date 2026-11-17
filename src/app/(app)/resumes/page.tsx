@@ -17,7 +17,15 @@ export const metadata: Metadata = { title: 'Resumes' }
 export default function Page() {
   return (
     <>
-      <PageHeader title="Resumes" text="Your master resume and the versions made from it." />
+      <PageHeader
+        title="Resumes"
+        text="Your master resume, the versions made from it, and resumes you uploaded."
+        action={
+          <Link href="/resumes/new" className={buttonClass()}>
+            Upload a resume
+          </Link>
+        }
+      />
       <Suspense fallback={<GridSkeleton />}>
         <Resumes />
       </Suspense>
@@ -55,18 +63,34 @@ async function Resumes() {
 function ResumeCard({ resume }: { resume: ResumeRecord }) {
   const c = resume.content
   return (
-    <Link href={`/resumes/${resume.id}`} className="group block rounded-card">
-      <Card className="h-full p-5 transition-colors duration-[120ms] group-hover:border-line-strong group-hover:bg-surface-muted">
-        <div className="flex items-start justify-between gap-3">
-          <h2 className="text-title font-semibold">{resume.name}</h2>
-          {resume.isMaster && <Badge tone="primary">Master</Badge>}
-        </div>
-        <p className="mt-1 text-small text-ink-2">Edited {timeAgo(resume.updatedAt)}</p>
-        <p className="mt-4 text-small text-ink-2">
-          {c ? `${countSections(c)} sections · ${countBullets(c)} bullets` : 'Needs to be opened in the editor'}
+    <Card className="relative h-full p-5 transition-colors duration-[120ms] hover:border-line-strong hover:bg-surface-muted">
+      <div className="flex items-start justify-between gap-3">
+        <h2 className="text-title font-semibold">
+          {/* The whole card opens the resume; the download link sits above this overlay. */}
+          <Link href={`/resumes/${resume.id}`} className="after:absolute after:inset-0 after:rounded-card">
+            {resume.name}
+          </Link>
+        </h2>
+        {resume.isMaster && <Badge tone="primary">Master</Badge>}
+      </div>
+      <p className="mt-1 text-small text-ink-2">
+        {resume.target ? `For ${resume.target} · ` : ''}Edited {timeAgo(resume.updatedAt)}
+      </p>
+      <p className="mt-4 text-small text-ink-2">
+        {c ? `${countSections(c)} sections · ${countBullets(c)} bullets` : 'Needs to be opened in the editor'}
+      </p>
+      {resume.file && (
+        <p className="mt-2 flex items-center gap-2 text-small text-ink-2">
+          <span className="truncate">📎 {resume.file.name}</span>
+          <a
+            href={`/resumes/${resume.id}/file`}
+            className="relative z-[1] shrink-0 font-medium text-primary hover:underline"
+          >
+            Download
+          </a>
         </p>
-      </Card>
-    </Link>
+      )}
+    </Card>
   )
 }
 

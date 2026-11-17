@@ -13,16 +13,22 @@ import { deleteResume, saveResume } from '../../actions'
 
 export const metadata: Metadata = { title: 'Edit resume' }
 
-export default function EditPage({ params }: PageProps<'/resumes/[id]/edit'>) {
+export default function EditPage({ params, searchParams }: PageProps<'/resumes/[id]/edit'>) {
   return (
     <Suspense fallback={<Loading />}>
-      <EditorLoader params={params} />
+      <EditorLoader params={params} searchParams={searchParams} />
     </Suspense>
   )
 }
 
-async function EditorLoader({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params
+async function EditorLoader({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}) {
+  const [{ id }, sp] = await Promise.all([params, searchParams])
   const resume = await getResume(Number(id))
   if (!resume) notFound()
   if (!resume.content)
@@ -38,6 +44,7 @@ async function EditorLoader({ params }: { params: Promise<{ id: string }> }) {
       <Editor
         id={resume.id}
         isMaster={resume.isMaster}
+        importedFrom={sp.imported && resume.file ? resume.file.name : undefined}
         initial={{
           content: resume.content,
           design: toDesign(resume.design),

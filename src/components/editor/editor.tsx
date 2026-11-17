@@ -36,9 +36,12 @@ export function Editor({
   save,
   ask,
   remove,
+  importedFrom,
 }: {
   id: number
   isMaster: boolean
+  /** Set right after an upload: the original file's name, for a "check what was read" note. */
+  importedFrom?: string
   initial: Draft
   save: SaveFn
   ask: AskFn
@@ -50,6 +53,7 @@ export function Editor({
   const [name, setName] = useState(initial.name)
   const [target, setTarget] = useState(initial.target)
   const [selected, setSelected] = useState<string | null>(null)
+  const [showImported, setShowImported] = useState(Boolean(importedFrom))
 
   const contentRef = useRef(content)
   useLayoutEffect(() => {
@@ -396,6 +400,19 @@ export function Editor({
           </p>
         )}
       </div>
+
+      {showImported && (
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-3 rounded-card border border-primary-tint-border bg-primary-tint/60 px-4 py-3">
+          <p className="text-small text-ink">
+            <b className="font-semibold">Imported from {importedFrom}.</b> The text was read automatically, so check
+            each section: click a heading to see its entries, fix anything that landed in the wrong place, then Save.
+            The original file stays attached to this resume.
+          </p>
+          <Button size="sm" variant="ghost" onClick={() => setShowImported(false)}>
+            Got it
+          </Button>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(380px,440px)]">
         {/* The page: fills the left, zoomable */}
