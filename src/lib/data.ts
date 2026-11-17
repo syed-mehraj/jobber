@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, count, desc, eq, gte, inArray, isNotNull, isNull, sql } from 'drizzle-orm'
+import { and, count, desc, eq, gte, inArray, isNotNull, isNull, ne, sql } from 'drizzle-orm'
 import { after, connection } from 'next/server'
 import { getDb } from '@/db'
 import { applications, jobs, resumes, sources, type ApplicationStatus, type Level, type Region } from '@/db/schema'
@@ -108,6 +108,8 @@ export type JobRow = {
   applied: boolean
   /** First seen in the last 24 hours. */
   isNew: boolean
+  /** ISO country code, when the location names a known country. */
+  country: string | null
 }
 
 const jobColumns = {
@@ -131,6 +133,7 @@ const jobColumns = {
   sourceKind: sources.kind,
   applied: sql<boolean>`exists (select 1 from ${applications} where ${applications.jobId} = ${jobs.id})`,
   isNew: sql<boolean>`${jobs.firstSeenAt} > now() - interval '24 hours'`,
+  country: jobs.country,
 }
 
 export async function getTopMatches(limit = 5): Promise<JobRow[]> {
@@ -144,13 +147,24 @@ export async function getTopMatches(limit = 5): Promise<JobRow[]> {
     .limit(limit)
 }
 
-export type JobFilter = { level?: Level | 'all'; region?: Region | 'all'; category?: string; sort?: 'best' | 'newest' }
+export type JobFilter = {
+  /** "home": India and remote roles. "abroad": roles in other countries with visa or relocation support. */
+  scope?: 'home' | 'abroad'
+  level?: Level | 'all'
+  region?: Region | 'all'
+  country?: string | 'all'
+  category?: string
+  sort?: 'best' | 'newest'
+}
 
 export async function getJobs(filter: JobFilter = {}, limit = 200): Promise<{ rows: JobRow[]; total: number }> {
   const d = await db()
   const where = [open]
+  if (filter.scope === 'abroad') where.push(eq(jobs.region, 'international'))
+  else if (filter.scope === 'home') where.push(ne(jobs.region, 'international'))
   if (filter.level && filter.level !== 'all') where.push(eq(jobs.level, filter.level))
   if (filter.region && filter.region !== 'all') where.push(eq(jobs.region, filter.region))
+  if (filter.country && filter.country !== 'all') where.push(eq(jobs.country, filter.country))
   if (filter.category && filter.category !== 'all') where.push(eq(jobs.category, filter.category))
   const order =
     filter.sort === 'newest' ? [desc(jobs.firstSeenAt), desc(jobs.score)] : [desc(jobs.score), desc(jobs.firstSeenAt)]
@@ -168,6 +182,35 @@ export async function getJobs(filter: JobFilter = {}, limit = 200): Promise<{ ro
       .where(and(...where)),
   ])
   return { rows, total: n }
+}
+
+/** Open roles abroad per country, most first; and the count for home (India + remote). */
+export async function getScopeCounts(): Promise<{
+  home: number
+  abroad: number
+  byCountry: { country: string; n: number }[]
+}> {
+  const d = await db()
+  const rows = await d
+    .select({ region: jobs.region, country: jobs.country, n: count() })
+    .from(jobs)
+    .where(open)
+    .groupBy(jobs.region, jobs.country)
+  let home = 0
+  let abroad = 0
+  const by = new Map<string, number>()
+  for (const r of rows) {
+    if (r.region === 'international') {
+      abroad += r.n
+      const c = r.country ?? 'other'
+      by.set(c, (by.get(c) ?? 0) + r.n)
+    } else home += r.n
+  }
+  return {
+    home,
+    abroad,
+    byCountry: [...by.entries()].map(([country, n]) => ({ country, n })).sort((a, b) => b.n - a.n),
+  }
 }
 
 export type SearchStatus = {

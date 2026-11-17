@@ -5,6 +5,7 @@ import type { JobRow } from '@/lib/data'
 import { ageInDays, levelLabel, shortAge, sourceLabel } from '@/lib/format'
 import { bandText, scoreBand } from '@/lib/score'
 import { isUnofficial } from '@/jobs/unofficial'
+import { COUNTRY_FLAGS, type CountryCode } from '@/jobs/countries'
 
 /**
  * One job. Line 1: role (opens the fit panel) and New. Line 2: company · location.
@@ -43,7 +44,9 @@ export function JobRowItem({ job, href, selected = false }: { job: JobRow; href:
           )}
         </Link>
         <span className="block truncate text-small text-ink-2">
-          {job.company} · {job.location}
+          {job.company} ·{' '}
+          {job.country && job.country !== 'IN' ? `${COUNTRY_FLAGS[job.country as CountryCode] ?? ''} ` : ''}
+          {job.location}
         </span>
         <span className="mt-0.5 block truncate text-caption text-ink-3">
           {sourceLabel[job.sourceKind] ?? job.source}

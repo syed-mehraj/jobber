@@ -11,7 +11,9 @@ import { PageHeader } from '@/components/ui/page-header'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { Level, Region } from '@/db/schema'
 import { cx } from '@/lib/cx'
-import { getJob, getJobs, getSearchStatus, refreshIfStale, type JobFilter } from '@/lib/data'
+import { getJob, getJobs, getScopeCounts, getSearchStatus, refreshIfStale, type JobFilter } from '@/lib/data'
+import { COUNTRY_FLAGS, COUNTRY_NAMES, type CountryCode } from '@/jobs/countries'
+import { CountryGuide } from '@/components/jobs/country-guide'
 import { timeAgo } from '@/lib/format'
 import { runSearchNow } from '../actions'
 
@@ -29,11 +31,18 @@ const REGIONS: [Region | 'all', string][] = [
   ['hyderabad', 'Hyderabad'],
   ['india', 'India'],
   ['remote', 'Remote'],
-  ['international', 'Abroad'],
 ]
 const CATEGORIES = ['all', 'ML / AI', 'Backend', 'SDE', 'Full-stack', 'Frontend', 'Mobile', 'Data', 'Infra']
 
-type Search = { level?: string; region?: string; category?: string; sort?: string; job?: string }
+type Search = {
+  scope?: string
+  level?: string
+  region?: string
+  country?: string
+  category?: string
+  sort?: string
+  job?: string
+}
 
 export default function JobsPage({ searchParams }: PageProps<'/jobs'>) {
   return (
@@ -58,6 +67,30 @@ function href(current: Search, change: Partial<Search>): string {
   for (const [k, v] of Object.entries(next)) if (v && v !== 'all' && !(k === 'sort' && v === 'best')) q.set(k, v)
   const s = q.toString()
   return s ? `/jobs?${s}` : '/jobs'
+}
+
+/** Two tabs: India & remote, or Abroad (roles with visa or relocation support). */
+function ScopeTabs({ abroad, home, away }: { abroad: boolean; home: number; away: number }) {
+  const tab = (on: boolean, href: string, label: string, n: number) => (
+    <Link
+      href={href}
+      scroll={false}
+      aria-current={on ? 'page' : undefined}
+      className={cx(
+        'relative -mb-px flex items-center gap-2 border-b-2 px-1 pb-2.5 font-medium transition-colors',
+        on ? 'border-primary text-primary' : 'border-transparent text-ink-2 hover:text-ink',
+      )}
+    >
+      {label}
+      <span className={cx('rounded-full px-2 text-caption leading-5', on ? 'bg-primary-tint' : 'bg-sunken')}>{n}</span>
+    </Link>
+  )
+  return (
+    <nav aria-label="Where" className="mb-4 flex gap-6 border-b border-line">
+      {tab(!abroad, '/jobs', 'India & remote', home)}
+      {tab(abroad, '/jobs?scope=abroad', 'Abroad · visa or relocation', away)}
+    </nav>
+  )
 }
 
 function Chips({
@@ -102,26 +135,48 @@ function Chips({
 async function JobsWorkspace({ searchParams }: { searchParams: Promise<Search> }) {
   const sp = await searchParams
   await refreshIfStale()
+  const abroad = sp.scope === 'abroad'
   const filter: JobFilter = {
+    scope: abroad ? 'abroad' : 'home',
     level: (sp.level as Level) ?? 'all',
-    region: (sp.region as Region) ?? 'all',
+    region: abroad ? 'all' : ((sp.region as Region) ?? 'all'),
+    country: abroad ? (sp.country ?? 'all') : 'all',
     category: sp.category ?? 'all',
     sort: sp.sort === 'newest' ? 'newest' : 'best',
   }
   const selectedId = Number(sp.job)
-  const [{ rows, total }, status] = await Promise.all([getJobs(filter), getSearchStatus()])
+  const [{ rows, total }, status, counts] = await Promise.all([getJobs(filter), getSearchStatus(), getScopeCounts()])
   // The panel shows the chosen job; on wide screens it falls back to the first one in the list.
   const panelId = Number.isInteger(selectedId) && selectedId > 0 ? selectedId : rows[0]?.id
   const detail = panelId ? await getJob(panelId) : null
   const chosen = Boolean(sp.job) && detail !== null
-  const active = [filter.level, filter.region, filter.category].filter((v) => v && v !== 'all').length
+  const active = [filter.level, filter.region, filter.country, filter.category].filter((v) => v && v !== 'all').length
+  const countryOptions: [string, string][] = [
+    ['all', `All countries (${counts.abroad})`],
+    ...counts.byCountry.map(({ country, n }): [string, string] => [
+      country,
+      `${COUNTRY_FLAGS[country as CountryCode] ?? '🌍'} ${COUNTRY_NAMES[country as CountryCode] ?? 'Other'} (${n})`,
+    ]),
+  ]
 
   return (
     <>
       <JobKeys />
+      <ScopeTabs abroad={abroad} home={counts.home} away={counts.abroad} />
+      {abroad && <CountryGuide country={filter.country ?? 'all'} />}
       <div className="grid gap-2.5">
+        {abroad ? (
+          <Chips
+            label="Country"
+            options={countryOptions}
+            value={filter.country ?? 'all'}
+            param="country"
+            current={sp}
+          />
+        ) : (
+          <Chips label="Where" options={REGIONS} value={filter.region ?? 'all'} param="region" current={sp} />
+        )}
         <Chips label="Level" options={LEVELS} value={filter.level ?? 'all'} param="level" current={sp} />
-        <Chips label="Where" options={REGIONS} value={filter.region ?? 'all'} param="region" current={sp} />
         <Chips
           label="Kind of role"
           options={CATEGORIES.map((c) => [c, c === 'all' ? 'All roles' : c])}
@@ -138,7 +193,11 @@ async function JobsWorkspace({ searchParams }: { searchParams: Promise<Search> }
             <>
               {' '}
               ·{' '}
-              <Link href="/jobs" scroll={false} className="font-medium text-primary hover:underline">
+              <Link
+                href={abroad ? '/jobs?scope=abroad' : '/jobs'}
+                scroll={false}
+                className="font-medium text-primary hover:underline"
+              >
                 Clear filters
               </Link>
             </>

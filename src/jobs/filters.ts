@@ -25,9 +25,11 @@ const PAST_INTAKE = /\b20(1\d|2[0-6])\b/
 const EXPERIENCE =
   /(\d{1,2})\s*(?:\+|plus)?\s*(?:-|–|to)?\s*(?:\d{1,2})?\s*\+?\s*years?(?:'|’)?\s*(?:of)?\s*(?:[\w-]+\s){0,6}?(?:experience|exp\b)/gi
 const NO_SPONSOR =
-  /(not (able|going) to (offer|provide) (visa )?sponsorship|unable to (offer|provide)? ?sponsor|no (visa )?sponsorship|without (the need for )?(visa )?sponsorship|must be (legally )?authori[sz]ed to work|u\.?s\.? citizen(ship)?|security clearance|green card|permanent resident)/i
+  /(not (able|going) to (offer|provide) (visa )?sponsorship|unable to (offer|provide)? ?sponsor|no (visa )?sponsorship|without (the need for )?(visa )?sponsorship|(do(es)? not|don't|cannot|can't|won't|will not|are not able to) (currently )?(offer|provide|support|sponsor)( any)? ?(visa|work permit|sponsorship)?|not (currently )?(offer|provid)(ing|e)? (visa )?sponsorship|must be (legally )?authori[sz]ed to work|must (already )?have (the )?(right|authori[sz]ation) to work|u\.?s\.? citizen(ship)?|security clearance|green card|permanent resident|eu (citizen|passport)|eligible to work in the (eu|uk|us))/i
 const SPONSOR =
-  /(visa sponsorship (is )?(available|provided|offered)|we (will|can|do) sponsor|sponsor(ship)? (is )?available|relocation (support|assistance|package))/i
+  /(visa sponsorship (is |will be )?(available|provided|offered|possible)|we (will|can|do|are able to|are happy to) sponsor|sponsor(ing)? (your |the |work )?visas?|sponsorship (is )?available|offer(s|ing)? (visa )?sponsorship|provide (visa )?sponsorship|visa support|work permit (support|sponsorship))/i
+const RELOCATION =
+  /(relocation (support|assistance|package|bonus|budget|allowance|help)|help (you )?(with )?relocat|support (your |you with |with )?relocat|relocate to (our|the|one of)|we('ll| will) (help|support)[^.]{0,40}relocat)/i
 
 const HYDERABAD = /\b(hyderabad|secunderabad|hitec city|gachibowli)\b/i
 const INDIA =
@@ -134,10 +136,14 @@ export function classify(p: RawPosting, now = new Date()): Classified {
   if (where === 'international' || where === 'remote-elsewhere') {
     // Internships abroad need enrolment or a visa in that country; a student in India can't take them.
     if (level === 'intern') return { keep: false, reason: 'internship abroad' }
-    // Abroad, only roles clearly for new graduates; experienced hires abroad aren't realistic.
-    if (level === 'unspecified') return { keep: false, reason: 'abroad, level not stated' }
-    if (!sponsors || blocks) return { keep: false, reason: 'abroad without visa sponsorship' }
-    flags.push('Visa sponsorship offered')
+    if (blocks) return { keep: false, reason: 'abroad, needs existing work rights' }
+    // Abroad only when the company says it sponsors a visa or helps you relocate.
+    const relocates = RELOCATION.test(text)
+    if (!sponsors && !relocates) return { keep: false, reason: 'abroad without visa or relocation support' }
+    // A role with no stated level abroad is kept only when it explicitly sponsors a visa.
+    if (level === 'unspecified' && !sponsors) return { keep: false, reason: 'abroad, level not stated' }
+    if (sponsors) flags.push('Visa sponsorship offered')
+    if (relocates) flags.push('Relocation support')
   } else if (where === 'remote' && blocks) {
     return { keep: false, reason: 'requires local work authorisation' }
   }
@@ -157,6 +163,7 @@ export function worthDetail(p: Pick<RawPosting, 'title' | 'location' | 'remote'>
   const yearsInTitle = title.match(PAST_INTAKE)
   if (yearsInTitle && !/2027|2028/.test(title)) return false
   const where = regionOf(p.location, p.remote)
-  if (where === 'international' || where === 'remote-elsewhere') return !INTERN.test(title) && NEW_GRAD.test(title)
+  // Abroad: download the description to look for visa or relocation support (internships abroad never qualify).
+  if (where === 'international' || where === 'remote-elsewhere') return !INTERN.test(title)
   return true
 }

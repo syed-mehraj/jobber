@@ -11,6 +11,7 @@ import type { JobDetail } from '@/lib/data'
 import { ageInDays, levelLabel, regionLabel, shortAge, sourceLabel } from '@/lib/format'
 import { bandText, scoreBand } from '@/lib/score'
 import { isUnofficial } from '@/jobs/unofficial'
+import { COUNTRY_FLAGS, COUNTRY_NAMES, type CountryCode } from '@/jobs/countries'
 
 /**
  * The fit panel beside the job list: why a role matched, what it asks for, how fresh it is,
@@ -50,7 +51,11 @@ export function JobInspector({ job, closeHref }: { job: JobDetail; closeHref?: s
         <div className="mt-3 flex flex-wrap gap-1.5">
           <Badge tone={job.level === 'unspecified' ? 'warning' : 'neutral'}>{levelLabel[job.level]}</Badge>
           <Badge>{job.category}</Badge>
-          <Badge>{regionLabel[job.region]}</Badge>
+          <Badge>
+            {job.region === 'international' && job.country
+              ? `${COUNTRY_FLAGS[job.country as CountryCode] ?? ''} ${COUNTRY_NAMES[job.country as CountryCode] ?? 'Abroad'}`
+              : regionLabel[job.region]}
+          </Badge>
           <Badge tone={age !== null && age > 30 ? 'warning' : 'neutral'}>
             {job.postedAt ? `Posted ${shortAge(job.postedAt)}` : `Seen ${shortAge(job.firstSeenAt)}`}
           </Badge>

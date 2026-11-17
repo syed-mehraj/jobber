@@ -2,6 +2,7 @@ import { and, desc, eq, gt, inArray, isNull, lt, sql } from 'drizzle-orm'
 import type { DB } from '@/db'
 import { abouts, jobs, resumes, runs, settings, sources } from '@/db/schema'
 import { adapters, UNOFFICIAL_KINDS } from './adapters'
+import { countryOf } from './countries'
 import { classify } from './filters'
 import { defaultProfile, scoreJob, type Profile } from './score'
 import { canonicalSkill, extractSkills } from './skills'
@@ -118,6 +119,7 @@ export async function runSearch(
             .trim()
             .slice(0, 300),
           region: c.region,
+          country: countryOf(p.location),
           level: c.level,
           category: c.category,
           url: p.url,
@@ -157,6 +159,7 @@ export async function runSearch(
               title: sql`excluded.title`,
               location: sql`excluded.location`,
               region: sql`excluded.region`,
+              country: sql`excluded.country`,
               level: sql`excluded.level`,
               category: sql`excluded.category`,
               url: sql`excluded.url`,

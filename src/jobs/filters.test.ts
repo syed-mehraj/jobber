@@ -56,7 +56,7 @@ describe('classify', () => {
         }),
         now,
       ),
-    ).toMatchObject({ keep: true, region: 'international', flags: ['Visa sponsorship offered'] })
+    ).toMatchObject({ keep: true, region: 'international', flags: ['Visa sponsorship offered', 'Relocation support'] })
     expect(
       classify(p('Software Engineer Intern', 'New York, NY', { hints: { sponsorship: 'Offers Sponsorship' } }), now),
     ).toMatchObject({ keep: false, reason: 'internship abroad' })
@@ -178,5 +178,37 @@ describe('Amazon wording', () => {
         now,
       ),
     ).toMatchObject({ keep: false, reason: 'asks for 3+ years' })
+  })
+})
+
+describe('abroad rules', () => {
+  const abroad = (title: string, location: string, description: string) =>
+    classify(p(title, location, { description }), now)
+  it('keeps new-grad roles abroad with relocation support, and sponsored roles with no stated level', () => {
+    expect(abroad('Graduate Software Engineer', 'Amsterdam', 'We offer a relocation package.')).toMatchObject({
+      keep: true,
+      flags: ['Relocation support'],
+    })
+    expect(abroad('Software Engineer', 'Berlin, Germany', 'We sponsor visas for international hires.')).toMatchObject({
+      keep: true,
+      flags: ['Visa sponsorship offered', 'Experience not stated'],
+    })
+  })
+  it('drops roles abroad that need existing work rights or give no support', () => {
+    expect(abroad('Junior Developer', 'Dublin', 'We do not offer visa sponsorship for this role.')).toMatchObject({
+      keep: false,
+      reason: 'abroad, needs existing work rights',
+    })
+    expect(abroad('Junior Developer', 'Munich', 'Must have the right to work in the EU.')).toMatchObject({
+      keep: false,
+    })
+    expect(abroad('Junior Developer', 'Zurich', 'Great snacks.')).toMatchObject({
+      keep: false,
+      reason: 'abroad without visa or relocation support',
+    })
+    expect(abroad('Software Engineer', 'London', 'Relocation package available.')).toMatchObject({
+      keep: false,
+      reason: 'abroad, level not stated',
+    })
   })
 })

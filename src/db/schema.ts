@@ -40,6 +40,8 @@ export const jobs = pgTable(
     title: text('title').notNull(),
     location: text('location').notNull(),
     region: text('region').$type<Region>().notNull(),
+    /** ISO country code from the location (src/jobs/countries.ts), when one is named. */
+    country: text('country'),
     level: text('level').$type<Level>().notNull(),
     category: text('category').notNull(),
     url: text('url').notNull(),
