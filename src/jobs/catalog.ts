@@ -24,6 +24,12 @@ const aggregated: CatalogEntry[] = [
     name: 'vanshb03 internship list',
     config: { owner: 'vanshb03', repo: 'Summer2027-Internships', kind: 'intern' },
   },
+  {
+    key: 'arbeitnow:visa',
+    kind: 'arbeitnow',
+    name: 'Arbeitnow (visa sponsorship, Germany)',
+    config: {},
+  },
   { key: 'hn:who-is-hiring', kind: 'hackernews', name: 'Hacker News: Who is hiring', config: {} },
 ]
 

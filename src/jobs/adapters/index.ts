@@ -1,5 +1,6 @@
 import type { Adapter } from '../types'
 import { amazon } from './amazon'
+import { arbeitnow } from './arbeitnow'
 import { ashby } from './ashby'
 import { eightfold } from './eightfold'
 import { google } from './google'
@@ -26,6 +27,7 @@ export const adapters: Record<string, Adapter> = {
   smartrecruiters,
   simplify,
   hackernews,
+  arbeitnow,
   amazon,
   eightfold,
   google,

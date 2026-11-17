@@ -3,7 +3,8 @@ import { Card } from '@/components/ui/card'
 import { COUNTRY_FLAGS, type CountryCode } from '@/jobs/countries'
 import { countryGuide, guideAsOf, type CountryInfo, type Realism } from '@/lib/countries-guide'
 
-const TONE: Record<Realism, 'success' | 'warning' | 'danger'> = { High: 'success', Medium: 'warning', Low: 'danger' }
+const tone = (r: Realism): 'success' | 'warning' | 'danger' =>
+  r.startsWith('High') || r.startsWith('Medium-High') ? 'success' : r.startsWith('Medium') ? 'warning' : 'danger'
 const flag = (code: string) => COUNTRY_FLAGS[code as CountryCode] ?? '🌍'
 
 /** At the top of the Abroad tab: an overview of countries, or the details for the chosen one. */
@@ -50,7 +51,7 @@ function Overview() {
                     {flag(c.code)} {c.name}
                   </td>
                   <td className="px-3 py-2.5">
-                    <Badge tone={TONE[c.visaRealism]}>{c.visaRealism}</Badge>
+                    <Badge tone={tone(c.visaRealism)}>{c.visaRealism}</Badge>
                   </td>
                   <td className="px-3 py-2.5 whitespace-nowrap">
                     {c.juniorPay}
@@ -86,7 +87,7 @@ function CountryCard({ c }: { c: CountryInfo }) {
         <h2 className="text-title font-semibold">
           {flag(c.code)} {c.name}
         </h2>
-        <Badge tone={TONE[c.visaRealism]}>Visa: {c.visaRealism}</Badge>
+        <Badge tone={tone(c.visaRealism)}>Visa: {c.visaRealism}</Badge>
         <span className="text-caption text-ink-3">#{c.rank} for you</span>
       </div>
       <p className="mt-1 text-ink-2">{c.verdict}</p>

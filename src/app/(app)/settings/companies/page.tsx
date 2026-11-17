@@ -17,6 +17,7 @@ const KIND: Record<string, string> = {
   smartrecruiters: 'SmartRecruiters',
   simplify: 'GitHub list',
   hackernews: 'Hacker News',
+  arbeitnow: 'Arbeitnow (visa)',
   amazon: 'Careers site',
   eightfold: 'Careers site (Eightfold)',
   google: 'Careers site',
