@@ -8,7 +8,8 @@ import { Card, CardHeader } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cx } from '@/lib/cx'
 import { getCounts, getSearchStatus, getTopMatches, refreshIfStale } from '@/lib/data'
-import { owner } from '@/lib/owner'
+import { getUser } from '@/lib/auth/session'
+import { displayUser } from '@/lib/owner'
 import { timeAgo } from '@/lib/format'
 import { runSearchNow } from './actions'
 
@@ -17,14 +18,19 @@ export const metadata: Metadata = { title: 'Dashboard' }
 export default function DashboardPage() {
   return (
     <>
-      <Suspense fallback={<GreetingFallback name={owner.firstName} />}>
-        <GreetingHeading name={owner.firstName} />
+      <Suspense fallback={<GreetingFallback name="" />}>
+        <Greeting />
       </Suspense>
       <Suspense fallback={<DashboardSkeleton />}>
         <DashboardBody />
       </Suspense>
     </>
   )
+}
+
+async function Greeting() {
+  const user = await getUser()
+  return <GreetingHeading name={displayUser(user).firstName} />
 }
 
 async function DashboardBody() {

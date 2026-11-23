@@ -8,11 +8,12 @@ export async function GreetingHeading({ name }: { name: string }) {
   await connection()
   return (
     <h1 className={headingClass}>
-      {greeting(istHour(new Date()))}, {name}
+      {greeting(istHour(new Date()))}
+      {name ? `, ${name}` : ''}
     </h1>
   )
 }
 
 export function GreetingFallback({ name }: { name: string }) {
-  return <h1 className={headingClass}>Hello, {name}</h1>
+  return <h1 className={headingClass}>Hello{name ? `, ${name}` : ''}</h1>
 }

@@ -144,7 +144,8 @@ export function MenuDrawer({ id, open, onClose, onNavigate, pathname, user, data
           <SearchCard data={data} run={actions.runSearchNow} />
 
           <Group>Settings</Group>
-          {item('/settings/companies', 'Companies and sources', <CompaniesIcon />)}
+          {user.isAdmin && item('/admin', 'People and invites', <PersonIcon />)}
+          {user.isAdmin && item('/settings/companies', 'Companies and sources', <CompaniesIcon />)}
           {item('/settings/roles', 'Roles and locations', <LocationIcon />)}
           {item('/settings/alerts', 'Telegram alerts', <BellIcon />)}
           {item('/styleguide', 'Style guide', <SwatchIcon />)}

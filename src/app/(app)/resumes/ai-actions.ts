@@ -3,7 +3,7 @@
 import { desc } from 'drizzle-orm'
 import { getDb } from '@/db'
 import { abouts } from '@/db/schema'
-import { requireSession } from '@/lib/auth/session'
+import { requireUser } from '@/lib/auth/session'
 import { AiNotConfiguredError, generateJson } from '@/lib/ai/gemini'
 import { buildAssistantPrompt, editablePaths, validateSuggestions, type Suggestion } from '@/resume/ai'
 import { toContent, type ResumeContent } from '@/resume/types'
@@ -39,7 +39,7 @@ function takeSlot(): boolean {
 }
 
 export async function askResumeAssistant(input: AssistantInput): Promise<AssistantResult> {
-  await requireSession()
+  await requireUser()
 
   const prompt = typeof input?.prompt === 'string' ? input.prompt.trim() : ''
   if (!prompt) return { ok: false, error: 'Tell the assistant what to change.' }

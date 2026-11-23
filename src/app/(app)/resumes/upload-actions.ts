@@ -3,7 +3,7 @@
 import { redirect } from 'next/navigation'
 import { getDb } from '@/db'
 import { resumeFiles, resumes } from '@/db/schema'
-import { requireSession } from '@/lib/auth/session'
+import { requireUser } from '@/lib/auth/session'
 import { defaultDesign } from '@/resume/design'
 import { aiParseResume } from '@/resume/import/ai-parse'
 import { extractText, UnsupportedFileError } from '@/resume/import/extract'
@@ -19,7 +19,7 @@ const MAX_BYTES = 5 * 1024 * 1024
  * mode "edit" opens the editor; mode "save" returns to the Resumes list.
  */
 export async function uploadResume(_prev: UploadState, form: FormData): Promise<UploadState> {
-  await requireSession()
+  await requireUser()
   const file = form.get('file')
   if (!(file instanceof File) || file.size === 0) return { error: 'Choose a file to upload.' }
   if (file.size > MAX_BYTES) return { error: 'The file is larger than 5 MB.' }

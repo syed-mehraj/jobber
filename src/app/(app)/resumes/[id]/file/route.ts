@@ -1,11 +1,11 @@
 import { desc, eq } from 'drizzle-orm'
 import { getDb } from '@/db'
 import { resumeFiles } from '@/db/schema'
-import { hasSession } from '@/lib/auth/session'
+import { getUser } from '@/lib/auth/session'
 
 /** Downloads the original file uploaded for a resume. */
 export async function GET(_request: Request, ctx: RouteContext<'/resumes/[id]/file'>) {
-  if (!(await hasSession())) return new Response('Sign in first', { status: 401 })
+  if (!(await getUser())) return new Response('Sign in first', { status: 401 })
   const id = Number((await ctx.params).id)
   if (!Number.isInteger(id)) return new Response('Not found', { status: 404 })
   const db = await getDb()

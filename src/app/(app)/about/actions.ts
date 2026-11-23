@@ -4,7 +4,7 @@ import { eq } from 'drizzle-orm'
 import { refresh } from 'next/cache'
 import { getDb } from '@/db'
 import { abouts } from '@/db/schema'
-import { requireSession } from '@/lib/auth/session'
+import { requireUser } from '@/lib/auth/session'
 import { ABOUT_MAX, ABOUT_TITLE_MAX } from '@/resume/about'
 
 export type AboutInput = { title: string; target: string; text: string }
@@ -24,7 +24,7 @@ function clean(input: AboutInput): { value?: { title: string; target: string | n
 }
 
 export async function createAbout(input: AboutInput): Promise<AboutResult> {
-  await requireSession()
+  await requireUser()
   const { value, error } = clean(input)
   if (!value) return { ok: false, error }
   const db = await getDb()
@@ -34,7 +34,7 @@ export async function createAbout(input: AboutInput): Promise<AboutResult> {
 }
 
 export async function updateAbout(id: number, input: AboutInput): Promise<AboutResult> {
-  await requireSession()
+  await requireUser()
   if (!Number.isInteger(id)) return { ok: false, error: 'Not found.' }
   const { value, error } = clean(input)
   if (!value) return { ok: false, error }
@@ -48,7 +48,7 @@ export async function updateAbout(id: number, input: AboutInput): Promise<AboutR
 }
 
 export async function duplicateAbout(id: number): Promise<AboutResult> {
-  await requireSession()
+  await requireUser()
   if (!Number.isInteger(id)) return { ok: false, error: 'Not found.' }
   const db = await getDb()
   const [src] = await db.select().from(abouts).where(eq(abouts.id, id))
@@ -62,7 +62,7 @@ export async function duplicateAbout(id: number): Promise<AboutResult> {
 }
 
 export async function deleteAbout(id: number): Promise<AboutResult> {
-  await requireSession()
+  await requireUser()
   if (!Number.isInteger(id)) return { ok: false, error: 'Not found.' }
   const db = await getDb()
   await db.delete(abouts).where(eq(abouts.id, id))

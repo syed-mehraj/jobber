@@ -3,7 +3,7 @@ import { asc, desc, eq } from 'drizzle-orm'
 import { connection } from 'next/server'
 import { getDb } from '@/db'
 import { abouts, resumeFiles, resumes } from '@/db/schema'
-import { requireSession } from '@/lib/auth/session'
+import { requireUser } from '@/lib/auth/session'
 import type { About } from '@/resume/about'
 import { toContent, type ResumeContent } from '@/resume/types'
 
@@ -25,7 +25,7 @@ export type ResumeRecord = {
 async function db() {
   // Reads depend on the request and the session, so they are never prerendered.
   await connection()
-  await requireSession()
+  await requireUser()
   return getDb()
 }
 

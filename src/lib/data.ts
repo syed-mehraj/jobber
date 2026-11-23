@@ -3,7 +3,7 @@ import { and, count, desc, eq, gte, inArray, isNotNull, isNull, ne, sql } from '
 import { after, connection } from 'next/server'
 import { getDb } from '@/db'
 import { applications, jobs, resumes, sources, type ApplicationStatus, type Level, type Region } from '@/db/schema'
-import { requireSession } from '@/lib/auth/session'
+import { requireUser } from '@/lib/auth/session'
 import { isStale, lastRun, runSearch } from '@/jobs/run'
 
 /*
@@ -17,7 +17,7 @@ const REFRESH_MINUTES = Number(process.env.REFRESH_MINUTES) || 10
 async function db() {
   // Everything below depends on the request and the current time, so it is never prerendered.
   await connection()
-  await requireSession()
+  await requireUser()
   return getDb()
 }
 

@@ -5,7 +5,7 @@ import { refresh } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { getDb } from '@/db'
 import { resumes } from '@/db/schema'
-import { requireSession } from '@/lib/auth/session'
+import { requireUser } from '@/lib/auth/session'
 import { toDesign } from '@/resume/design'
 import { blankResume } from '@/resume/edit-ops'
 import { masterResume } from '@/resume/master'
@@ -17,7 +17,7 @@ export type CreateState = { error?: string }
 
 /** New resume: a copy of the master (or of another version), or a blank one with your contact details. */
 export async function createResume(_prev: CreateState, form: FormData): Promise<CreateState> {
-  await requireSession()
+  await requireUser()
   const name = String(form.get('name') ?? '').trim()
   const target = String(form.get('target') ?? '').trim()
   const from = String(form.get('from') ?? 'master')
@@ -61,7 +61,7 @@ export async function saveResume(
   id: number,
   input: { content: unknown; design: unknown; name: string; target: string },
 ): Promise<SaveResult> {
-  await requireSession()
+  await requireUser()
   if (!Number.isInteger(id)) return { ok: false, error: 'Not found.' }
   const content = toContent(input.content)
   if (!content) return { ok: false, error: 'The resume data is not valid.' }
@@ -92,7 +92,7 @@ export async function saveResume(
 
 /** Deletes a version. The master resume can't be deleted. */
 export async function deleteResume(id: number): Promise<void> {
-  await requireSession()
+  await requireUser()
   if (!Number.isInteger(id)) return
   const db = await getDb()
   await db.delete(resumes).where(and(eq(resumes.id, id), eq(resumes.isMaster, false)))

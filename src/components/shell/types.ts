@@ -1,4 +1,4 @@
-export type User = { firstName: string; initials: string }
+export type User = { firstName: string; initials: string; isAdmin?: boolean }
 
 /** What the header and menu show from the database. Null while it loads. */
 export type ShellData = {

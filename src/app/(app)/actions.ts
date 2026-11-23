@@ -4,14 +4,14 @@ import { eq } from 'drizzle-orm'
 import { refresh } from 'next/cache'
 import { getDb } from '@/db'
 import { applications, jobs, type ApplicationStatus } from '@/db/schema'
-import { requireSession } from '@/lib/auth/session'
+import { requireUser } from '@/lib/auth/session'
 import { runSearch } from '@/jobs/run'
 
 const STATUSES: ApplicationStatus[] = ['saved', 'applied', 'oa', 'interview', 'offer', 'rejected']
 
 /** "Did you apply?" → Yes. */
 export async function markApplied(jobId: number): Promise<void> {
-  await requireSession()
+  await requireUser()
   if (!Number.isInteger(jobId)) return
   const db = await getDb()
   const [job] = await db.select({ id: jobs.id }).from(jobs).where(eq(jobs.id, jobId))
@@ -21,7 +21,7 @@ export async function markApplied(jobId: number): Promise<void> {
 }
 
 export async function setApplicationStatus(id: number, status: ApplicationStatus): Promise<void> {
-  await requireSession()
+  await requireUser()
   if (!Number.isInteger(id) || !STATUSES.includes(status)) return
   const db = await getDb()
   await db.update(applications).set({ status, updatedAt: new Date() }).where(eq(applications.id, id))
@@ -29,7 +29,7 @@ export async function setApplicationStatus(id: number, status: ApplicationStatus
 }
 
 export async function removeApplication(id: number): Promise<void> {
-  await requireSession()
+  await requireUser()
   if (!Number.isInteger(id)) return
   const db = await getDb()
   await db.delete(applications).where(eq(applications.id, id))
@@ -38,7 +38,7 @@ export async function removeApplication(id: number): Promise<void> {
 
 /** Hide a role from the lists (it stays hidden when the search sees it again). `restore` undoes it. */
 export async function setDismissed(jobId: number, dismissed: boolean): Promise<void> {
-  await requireSession()
+  await requireUser()
   if (!Number.isInteger(jobId)) return
   const db = await getDb()
   await db
@@ -52,7 +52,7 @@ export type RunNowResult = { ok: boolean; message: string }
 
 /** "Run search now": waits for the run, then refreshes the page. */
 export async function runSearchNow(): Promise<RunNowResult> {
-  await requireSession()
+  await requireUser()
   const db = await getDb()
   const summary = await runSearch(db, 'manual')
   refresh()

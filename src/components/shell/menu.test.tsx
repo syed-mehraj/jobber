@@ -20,9 +20,12 @@ const data: ShellData = {
 }
 const actions = { runSearchNow: vi.fn(async () => ({ ok: true, message: '3 new' })), signOut: vi.fn(async () => {}) }
 
-function renderHeader() {
-  return render(<AppHeader user={{ firstName: 'Syed', initials: 'SM' }} data={data} actions={actions} />)
+function renderHeader(isAdmin = true) {
+  return render(<AppHeader user={{ firstName: 'Syed', initials: 'SM', isAdmin }} data={data} actions={actions} />)
 }
+
+const menuLinks = () =>
+  Array.from(screen.getByRole('navigation', { name: 'Menu' }).querySelectorAll('a')).map((a) => a.textContent ?? '')
 
 describe('isActive', () => {
   it('matches the page and its children, and the dashboard only exactly', () => {
@@ -78,6 +81,7 @@ describe('header and menu slider', () => {
       'Resumes',
       'Jobs',
       'Applications',
+      'People and invites',
       'Companies and sources',
       'Roles and locations',
       'Telegram alerts',
@@ -87,6 +91,14 @@ describe('header and menu slider', () => {
     }
     expect(screen.getByText('Run search now')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument()
+  })
+
+  it('shows the admin pages only to the admin', () => {
+    renderHeader(false)
+    fireEvent.click(screen.getByRole('button', { name: 'Open menu' }))
+    expect(menuLinks().some((t) => t.startsWith('People and invites'))).toBe(false)
+    expect(menuLinks().some((t) => t.startsWith('Companies and sources'))).toBe(false)
+    expect(menuLinks().some((t) => t.startsWith('Resumes'))).toBe(true)
   })
 
   it('runs a search from the menu and shows the result', async () => {
