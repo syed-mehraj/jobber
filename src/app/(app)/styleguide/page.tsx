@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { notFound } from 'next/navigation'
 import type { ReactNode } from 'react'
 import { Badge, ScoreBadge } from '@/components/ui/badge'
 import { Button, iconButtonClass, type ButtonVariant } from '@/components/ui/button'
@@ -38,6 +39,8 @@ const variants: { v: ButtonVariant; label: string; use: string }[] = [
 ]
 
 export default function StyleguidePage() {
+  // A design tool for local development only; the live site doesn't have it.
+  if (process.env.NODE_ENV === 'production') notFound()
   return (
     <>
       <PageHeader title="Style guide" text="Every token and component from docs/DESIGN.md, in code." />

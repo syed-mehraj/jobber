@@ -148,7 +148,7 @@ export function MenuDrawer({ id, open, onClose, onNavigate, pathname, user, data
           {user.isAdmin && item('/settings/companies', 'Companies and sources', <CompaniesIcon />)}
           {item('/settings/roles', 'Roles and locations', <LocationIcon />)}
           {item('/settings/alerts', 'Telegram alerts', <BellIcon />)}
-          {item('/styleguide', 'Style guide', <SwatchIcon />)}
+          {process.env.NODE_ENV !== 'production' && item('/styleguide', 'Style guide', <SwatchIcon />)}
         </nav>
 
         <div className="flex shrink-0 items-center gap-2.5 border-t border-line px-5 py-3.5">

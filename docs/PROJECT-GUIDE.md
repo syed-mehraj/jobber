@@ -81,7 +81,7 @@ Checks: `npm test` · `npm run lint` · `npm run typecheck` · `npm run build`.
 | Applications | `/applications` | Roles you applied to, with a stage each |
 | Programs and other sites | `/programs` | Schemes and sites the app can't read automatically |
 | Companies and sources (admin) | `/settings/companies` | Every source: postings seen, roles kept, OK / Failing, Unofficial badge |
-| Style guide | `/styleguide` | Every colour, size, button, input state |
+| Style guide | `/styleguide` | Every colour, size, button, input state. Local development only (`npm run dev`); not on the live site |
 
 ### Flow: find and apply to a job
 ```
