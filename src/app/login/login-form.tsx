@@ -17,7 +17,8 @@ export function LoginForm({ google, error: initialError }: { google: boolean; er
     setError(undefined)
     const { error } = await authClient.signIn.email({
       email: String(form.get('email') ?? '').trim(),
-      password: String(form.get('password') ?? ''),
+      // Spaces at either end (often picked up when pasting) are never part of a password.
+      password: String(form.get('password') ?? '').trim(),
     })
     if (error) {
       setPending(false)

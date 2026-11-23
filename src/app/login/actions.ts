@@ -15,8 +15,9 @@ function readAccount(form: FormData): { name: string; password: string; error?: 
   const name = String(form.get('name') ?? '')
     .trim()
     .slice(0, NAME_MAX)
-  const password = String(form.get('password') ?? '')
-  const confirm = String(form.get('confirm') ?? '')
+  // Spaces at either end are dropped, the same as on sign-in.
+  const password = String(form.get('password') ?? '').trim()
+  const confirm = String(form.get('confirm') ?? '').trim()
   if (!name) return { name, password, error: 'Enter your name.' }
   if (password.length < PASSWORD_MIN)
     return { name, password, error: `Use a password of at least ${PASSWORD_MIN} characters.` }
