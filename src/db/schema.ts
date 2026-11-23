@@ -340,3 +340,17 @@ export const jobMatches = pgTable(
   },
   (t) => [primaryKey({ columns: [t.userId, t.jobId] }), index('job_matches_user_score').on(t.userId, t.score)],
 )
+
+/** AI requests per person per day (India time), for the daily limit on the shared Gemini key. */
+export const aiUsage = pgTable(
+  'ai_usage',
+  {
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    /** YYYY-MM-DD in India time. */
+    day: text('day').notNull(),
+    count: integer('count').notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.day] })],
+)

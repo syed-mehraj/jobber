@@ -1,6 +1,6 @@
 # Jobber for several people: accounts, sign-in and separate data
 
-Started 23 Nov 2026. Goal: other people can use Jobber with their own accounts (Google sign-in or email and password), and each person sees only their own resumes, About you, applications and match scores.
+Started and finished 23 Nov 2026 (all four steps done, each with a full regression run). Goal: other people can use Jobber with their own accounts (Google sign-in or email and password), and each person sees only their own resumes, About you, applications and match scores.
 
 ## Decisions
 

@@ -5,6 +5,7 @@ import { getDb } from '@/db'
 import { abouts } from '@/db/schema'
 import { requireUser } from '@/lib/auth/session'
 import { AiNotConfiguredError, generateJson } from '@/lib/ai/gemini'
+import { AI_DAILY_LIMIT, takeAiRequest } from '@/lib/ai/limits'
 import { buildAssistantPrompt, editablePaths, validateSuggestions, type Suggestion } from '@/resume/ai'
 import { toContent, type ResumeContent } from '@/resume/types'
 
@@ -27,14 +28,15 @@ const CONTENT_MAX = 200_000
 const LIMIT = 20
 const WINDOW_MS = 10 * 60 * 1000
 
-/** Timestamps of recent calls. In memory, so it is per server process, which is enough for one user. */
-const recent: number[] = []
+/** Recent calls per person, to stop bursts. In memory (per server instance); the daily limit is in the database. */
+const recent = new Map<string, number[]>()
 
-function takeSlot(): boolean {
+function takeSlot(userId: string): boolean {
   const now = Date.now()
-  while (recent.length && now - recent[0] > WINDOW_MS) recent.shift()
-  if (recent.length >= LIMIT) return false
-  recent.push(now)
+  const list = (recent.get(userId) ?? []).filter((t) => now - t <= WINDOW_MS)
+  if (list.length >= LIMIT) return false
+  list.push(now)
+  recent.set(userId, list)
   return true
 }
 
@@ -59,11 +61,16 @@ export async function askResumeAssistant(input: AssistantInput): Promise<Assista
   const allowed = editablePaths(content, focusBlock)
   if (!allowed.length) return { ok: false, error: 'There is nothing to edit in that part of the resume.' }
 
-  if (!takeSlot())
+  if (!takeSlot(user.id))
     return { ok: false, error: 'Too many assistant requests in a short time. Wait a few minutes and try again.' }
 
   try {
     const db = await getDb()
+    if (!(await takeAiRequest(db, user.id, user.role)))
+      return {
+        ok: false,
+        error: `You've used today's ${AI_DAILY_LIMIT[user.role]} assistant requests. They reset at midnight (India time).`,
+      }
     const rows = await db
       .select({ text: abouts.text })
       .from(abouts)

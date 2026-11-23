@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation'
 import { getDb } from '@/db'
 import { resumeFiles, resumes } from '@/db/schema'
+import { takeAiRequest } from '@/lib/ai/limits'
 import { requireUser } from '@/lib/auth/session'
 import { defaultDesign } from '@/resume/design'
 import { aiParseResume } from '@/resume/import/ai-parse'
@@ -46,9 +47,11 @@ export async function uploadResume(_prev: UploadState, form: FormData): Promise<
     }
   }
 
-  const content = (await aiParseResume(text)) ?? parseResumeText(text).content
-
   const db = await getDb()
+  // Reading with Gemini counts towards the person's daily AI requests; past the limit the built-in parser reads it.
+  const useAi = Boolean(process.env.GEMINI_API_KEY) && (await takeAiRequest(db, user.id, user.role))
+  const content = (useAi ? await aiParseResume(text) : null) ?? parseResumeText(text).content
+
   const [row] = await db
     .insert(resumes)
     .values({ userId: user.id, name, target: target || null, isMaster: false, content, design: defaultDesign })

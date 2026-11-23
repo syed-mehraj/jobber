@@ -1,6 +1,6 @@
 # Jobber: everything we built
 
-As of 17 Nov 2026. Repo: `github.com/syed-mehraj/jobber` (private). This guide explains every part of the app: what it does, why it was built that way, which APIs it uses, how each flow works, and where the code lives.
+As of 23 Nov 2026 (accounts added; see [MULTI-USER-PLAN.md](MULTI-USER-PLAN.md) and [GOOGLE-SIGN-IN.md](GOOGLE-SIGN-IN.md)). Repo: `github.com/syed-mehraj/jobber` (private). This guide explains every part of the app: what it does, why it was built that way, which APIs it uses, how each flow works, and where the code lives.
 
 Related docs: [PLAN.md](PLAN.md) (step-by-step plan), [DESIGN.md](DESIGN.md) (design system), [DASHBOARD.md](DASHBOARD.md), [SOURCES.md](SOURCES.md) (job sources and why), [ABROAD.md](ABROAD.md) (country research).
 
@@ -8,7 +8,7 @@ Related docs: [PLAN.md](PLAN.md) (step-by-step plan), [DESIGN.md](DESIGN.md) (de
 
 ## 1. What Jobber is
 
-A private, single-user web app for one job seeker (Syed: B.E. AI & ML, MJCET / Osmania University, graduating 2027, AI Engineer at Parcera). It does three things:
+A private, invite-only web app, built for one job seeker (Syed: B.E. AI & ML, MJCET / Osmania University, graduating 2027, AI Engineer at Parcera) who can invite others. Each person has their own account (Google or email + password) and their own resumes, About you, applications and match scores; the job search is shared. It does three things:
 
 1. **Resumes:** keeps a master resume and versions tailored per role, in an editor where you edit directly on the page.
 2. **Jobs:** searches 270+ company job boards and lists only roles a 2027 graduate can realistically get, in India, remote, and abroad with visa or relocation support.
@@ -39,16 +39,20 @@ A private, single-user web app for one job seeker (Syed: B.E. AI & ML, MJCET / O
 
 1. In the `jobber` folder: `npm install`.
    On this Mac npm needs: `NODE_OPTIONS="--dns-result-order=ipv4first --no-network-family-autoselection"` (your traffic goes through a VPN tunnel and Node's automatic IPv4/IPv6 choice times out).
-2. `npm run set-password` → type a password twice. Only its **scrypt hash** is saved, to `.env.local`, plus a random `SESSION_SECRET` and `CRON_SECRET`.
-3. `npm run dev` → open `http://localhost:3000`. The first visit starts a job search; refresh after a minute.
-4. Optional: add `GEMINI_API_KEY=your-key` to `.env.local`, restart → the AI assistant and smarter upload parsing turn on.
+2. `npm run set-password` → type a password twice. Only its **scrypt hash** is saved, to `.env.local`, plus a random `SESSION_SECRET` (also signs sign-in sessions) and `CRON_SECRET`. This password is the **setup password**: it proves you're the owner once, on `/setup`.
+3. `npm run dev` → open `http://localhost:3000` → **Set up Jobber** (`/setup`): your name, email, a new account password and the setup password. That creates the admin account and moves everything stored so far into it. After that you sign in with email + password (or Google).
+4. Invite people on **People and invites** (`/admin`, in the ☰ menu): enter their email → copy the link → send it. The first visit starts a job search; refresh after a minute.
+5. Optional: add `GEMINI_API_KEY=your-key` to `.env.local`, restart → the AI assistant and smarter upload parsing turn on.
+6. Optional: Google sign-in → follow [GOOGLE-SIGN-IN.md](GOOGLE-SIGN-IN.md) to add `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`.
 
 Checks: `npm test` · `npm run lint` · `npm run typecheck` · `npm run build`.
 
 | Variable in `.env.local` (git-ignored) | What it's for |
 |---|---|
-| `APP_PASSWORD_HASH` | scrypt hash of your sign-in password |
-| `SESSION_SECRET` | signs the session cookie |
+| `APP_PASSWORD_HASH` | scrypt hash of the setup password (used once on `/setup`) |
+| `SESSION_SECRET` | signs sign-in sessions (Better Auth's secret; `BETTER_AUTH_SECRET` overrides it) |
+| `BETTER_AUTH_URL` | the site's address, e.g. `https://jobber-ten-silk.vercel.app`; optional locally (any `localhost` port works) and on Vercel (the production address is used) |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | "Continue with Google"; hidden when unset ([GOOGLE-SIGN-IN.md](GOOGLE-SIGN-IN.md)) |
 | `CRON_SECRET` | key for the scheduled-search endpoint `/api/cron` |
 | `DATABASE_URL` | empty locally (PGlite); Neon connection string on Vercel |
 | `REFRESH_MINUTES` | minutes between automatic searches while you use the app (default 10) |
@@ -64,7 +68,10 @@ Checks: `npm test` · `npm run lint` · `npm run typecheck` · `npm run build`.
 
 | Page | Route | What you do there |
 |---|---|---|
-| Sign in | `/login` | Enter your password |
+| Sign in | `/login` | Email + password, or **Continue with Google** |
+| Set up | `/setup` | Once: create the owner (admin) account with the setup password |
+| Create account | `/signup?invite=…` | From an invite link: name + password, or Google with the invited email |
+| People and invites (admin) | `/admin` | Invite by email (link shown once, 14 days, single use), open invites (Revoke), people (Remove) |
 | Dashboard | `/` | Greeting (India time), 3 stat cards with context (open matches + "new today", applied + "waiting to hear back", tests & interviews), today's 5 best matches |
 | Jobs | `/jobs` | Tabs **India & remote** / **Abroad · visa or relocation**; filter chips; list + fit panel; J/K to move |
 | Resumes | `/resumes` | Resume cards, attached original files (Download), Upload button |
@@ -74,7 +81,7 @@ Checks: `npm test` · `npm run lint` · `npm run typecheck` · `npm run build`.
 | About you | `/about` | Several descriptions of your work, one per kind of application |
 | Applications | `/applications` | Roles you applied to, with a stage each |
 | Programs and other sites | `/programs` | Schemes and sites the app can't read automatically |
-| Companies and sources | `/settings/companies` | Every source: postings seen, roles kept, OK / Failing, Unofficial badge |
+| Companies and sources (admin) | `/settings/companies` | Every source: postings seen, roles kept, OK / Failing, Unofficial badge |
 | Style guide | `/styleguide` | Every colour, size, button, input state |
 
 ### Flow: find and apply to a job
@@ -284,7 +291,7 @@ A small box at the bottom right of the editor. Type what you want ("make the bul
 | Where | Server only (`src/lib/ai/gemini.ts`, server action `src/app/(app)/resumes/ai-actions.ts`); the key never reaches the browser and is never logged |
 | Prompt rules (`src/resume/ai.ts`) | Edit only the listed paths; stay within facts in the resume and "About you"; never add a number, tool, employer, title, degree or date; if a fact is missing, write "[add number]"; plain ATS text, strong verbs, ≤ 2 lines per bullet; never touch email/GitHub/LinkedIn/website |
 | Validation | Drops suggestions with unknown or disallowed paths, contact links, empty/identical/too-long text, duplicates; strips markdown; max 12 |
-| Limits | Prompt ≤ 1000 characters, job description ≤ 8000, 20 calls per 10 minutes |
+| Limits | Prompt ≤ 1000 characters, job description ≤ 8000; per person: 20 calls per 10 minutes and **30 a day (admin 200)**, reset at midnight India time (`ai_usage` table, `src/lib/ai/limits.ts`). Uploads read with Gemini count too; past the limit the built-in parser reads them |
 | Logging | One line per call: model, tokens in/out, duration (no prompt text, no key) |
 | Without a key | Shows "Add GEMINI_API_KEY to .env.local to use the assistant." |
 
@@ -329,14 +336,29 @@ Tested end to end: your master resume printed to PDF and uploaded came back with
 
 ---
 
-## 12. Sign-in, privacy and security
+## 12. Accounts, sign-in, privacy and security
+
+**Who can get in:** invite-only. The owner claims the admin account once on `/setup` (needs the setup password from `npm run set-password`). The admin invites people by email on `/admin`; each person opens their link and either sets a password or uses Google with that email. Google sign-in for an email without an invite is refused ("That Google account has no invite").
+
+**What is shared and what is yours:**
+
+| Shared | Per person |
+|---|---|
+| Job sources, the jobs found, search runs | Resumes and uploaded files, About you, applications, skills profile, match scores, dismissed jobs, AI usage |
+
+Unofficial big-tech jobs (Amazon, Google, Microsoft, Netflix) are shown only to the admin; everyone else sees official boards only. Each person's scores are worked out against their own master resume and About you, after every search and right after they edit either.
 
 | What | How |
 |---|---|
-| Password | scrypt hash in `APP_PASSWORD_HASH` (set by `npm run set-password`); the password itself is never stored |
-| Session | Signed token (HMAC-SHA256 with `SESSION_SECRET`, Web Crypto) in an httpOnly, SameSite=Lax cookie (Secure in production), 30 days |
-| Route protection | `src/proxy.ts` (Next 16's "middleware") redirects signed-out visits to `/login`; `/api/*` returns 401. Every data read and server action also calls `requireSession()` |
-| Failed logins | Slowed down progressively (0.5 s, then more per failure) |
+| Library | Better Auth 1.7.25 (`src/lib/auth/auth.ts`), Drizzle adapter, sessions in the database, 30 days |
+| Passwords | Better Auth's scrypt hashing; 10–128 characters |
+| Google | OAuth with state + PKCE; callback `/api/auth/callback/google`; signing in with Google using an existing account's email links Google to it |
+| Sign-up | The public sign-up endpoint is disabled. Accounts are created only by the invite and setup server actions (`src/app/login/actions.ts`), inside a gate that a database hook checks; Google creates one only for an invited email |
+| Invites | 32 random bytes in the link; only a SHA-256 hash stored; single use; 14 days; revocable |
+| Roles | `admin` (the owner) or `user`; can't be set from a request. Admin-only: `/admin`, Companies and sources, unofficial jobs |
+| Route protection | `src/proxy.ts` redirects requests without a session cookie; every data read and server action checks the session in the database (`requireUser` / `requireAdmin`) and filters by the person's id; updates and deletes use id **and** owner |
+| Rate limits | Sign-in 10 tries per 5 minutes per IP (stored in the database, so it holds across Vercel instances); AI as in §9 |
+| Removing someone | Deletes their account, sessions and all their data (cascade); open sessions stop working at once |
 | Cron | `/api/cron` needs `Authorization: Bearer CRON_SECRET` (constant-time compare) |
 | Secrets | Only in `.env.local` / Vercel settings; none prefixed `NEXT_PUBLIC_`; Gemini key server-only and never logged |
 | Pre-commit hook | `.githooks/pre-commit` blocks keys (Google, Telegram), DB URLs with passwords, private keys, `token/secret/password =` assignments and Indian phone numbers |
@@ -347,20 +369,25 @@ Tested end to end: your master resume printed to PDF and uploaded came back with
 
 ## 13. Database
 
-Drizzle schema in `src/db/schema.ts`; SQL migrations in `drizzle/` (0000–0005).
+Drizzle schema in `src/db/schema.ts`; SQL migrations in `drizzle/` (0000–0009).
 
 | Table | Holds |
 |---|---|
 | `sources` | Every job source: kind, config, enabled, last run / success / error, postings seen / kept |
-| `jobs` | Kept postings: title, company, location, region, country, level, category, url, dates, score, matched / missing / required skills, reasons, flags, summary, closed / dismissed |
+| `jobs` | Kept postings (shared): title, company, location, region, country, level, category, url, dates, required skills, flags, summary, closed. (Its old score / matched / missing / dismissed columns are no longer read.) |
+| `job_matches` | Per person and job: score, matched / missing skills, reasons, dismissed |
 | `runs` | Each search: trigger, start/finish, sources ok/failed, seen/kept/added/closed, errors |
-| `applications` | Job + stage + dates + notes |
-| `resumes` | Name, master flag, content (JSON with stable ids), design (template/font/accent), target |
-| `resume_files` | Uploaded originals (bytea), linked to a resume |
-| `abouts` | "About you" descriptions |
-| `settings` | Key/value: the matching profile |
+| `applications` | Owner + job + stage + dates + notes (one per person and job) |
+| `resumes` | Owner, name, master flag, content (JSON with stable ids), design (template/font/accent), target |
+| `resume_files` | Owner + uploaded original (bytea), linked to a resume |
+| `abouts` | Owner + "About you" descriptions |
+| `profiles` | Per person: skills and preferred job categories for scoring |
+| `ai_usage` | Per person and day: AI requests used |
+| `users`, `sessions`, `accounts`, `verifications`, `rate_limits` | Better Auth: people (with `role`), sign-in sessions, sign-in methods (password hash or Google), OAuth state, rate limits |
+| `invites` | Invited email, token hash, who invited, expiry, used by / when |
+| `settings` | Key/value: the old single matching profile (copied to the owner on setup) |
 
-**Local vs production:** without `DATABASE_URL` the app uses PGlite in `.data/pglite` (git-ignored); with it, node-postgres to Neon. Migrations apply on first use and **again automatically if new migrations appear while the app runs** (fix for the "column jobs.country does not exist" error). The source catalogs and the master resume are synced on startup.
+**Local vs production:** without `DATABASE_URL` the app uses PGlite in `.data/pglite` (git-ignored); with it, node-postgres to Neon. Migrations apply on first use and **again automatically if new migrations appear while the app runs** (fix for the "column jobs.country does not exist" error). The source catalogs are synced on startup; personal data is created per account (`src/lib/auth/onboard.ts`).
 
 ---
 
@@ -370,8 +397,11 @@ Drizzle schema in `src/db/schema.ts`; SQL migrations in `drizzle/` (0000–0005)
 src/
   app/
     layout.tsx, globals.css                 root layout, Inter font, design tokens
-    login/                                  sign-in page + actions (signIn, signOut)
+    login/                                  sign-in page + actions (invite sign-up, owner setup, sign out)
+    signup/, setup/                         create an account from an invite; claim the owner account once
+    api/auth/[...all]/route.ts              Better Auth endpoints (sign-in, Google callback, session…)
     api/cron/route.ts                       scheduled search (CRON_SECRET)
+    (app)/admin/                            People and invites (admin)
     (app)/layout.tsx                        header + menu slider, page container
     (app)/page.tsx                          Dashboard
     (app)/jobs/page.tsx                     Jobs (tabs, chips, list + fit panel)
@@ -381,6 +411,7 @@ src/
     (app)/programs/, settings/, styleguide/
   components/
     shell/                                  header, menu drawer, menu state, header fallback
+    auth/, admin/                           sign-in card and account form; invite form, confirm button
     ui/                                     Button, Card, Badge, Input, EmptyState, Skeleton, icons
     jobs/                                   job row, fit panel, dismiss, run-search button, country guide, J/K keys
     editor/                                 editor, close-up, design panels, AI assistant, history (undo), forms
@@ -391,15 +422,17 @@ src/
     catalog*.ts                             official, international, unofficial sources
     filters.ts, score.ts, skills.ts         rules, scoring, skills dictionary
     countries.ts, run.ts, unofficial.ts
+    matches.ts                              per-person profiles and scores (job_matches)
   resume/
     types.ts, paths.ts, edit-ops.ts         content model, field paths, edits
     render.tsx, themes.ts, design.ts, fonts.ts   templates and fonts
     master.ts, about.ts                     your master resume and first About-you text
     ai.ts, import/                          AI prompt/validation; upload extract/parse/ai-parse
-  lib/                                      data access, auth, format, programs, countries guide, resumes, Gemini client
+  lib/auth/                                 auth.ts (Better Auth), session.ts (getUser/requireUser/requireAdmin), invites, gate, onboard (owner claim, new-person start), client
+  lib/                                      data access, admin reads, AI limits, format, programs, countries guide, resumes, Gemini client
   proxy.ts                                  route protection
-docs/                                       PLAN, DESIGN, DASHBOARD, SOURCES, ABROAD, this guide
-scripts/set-password.mjs                    password setup
+docs/                                       PLAN, DESIGN, DASHBOARD, SOURCES, ABROAD, MULTI-USER-PLAN, GOOGLE-SIGN-IN, this guide
+scripts/set-password.mjs                    setup password
 .githooks/pre-commit                        secret / phone-number blocker
 ```
 
@@ -426,5 +459,6 @@ Parallel work: several pieces were built by Sonnet subagents in separate git wor
 2. **Fill the master resume's TODOs:** Steady role (title, dates, what you built), AI Excel Analyst, portfolio project, LinkedIn, certificate issuer; update your Parcera title to **AI Engineer** and confirm dates.
 3. **Check skills listed** that may not be yours (Kafka, WebRTC, Prisma, Expo, Kotlin).
 4. **Microsoft/Netflix feeds** may show "Failing" until their rate limit clears.
-5. **Not built yet:** Telegram morning digest, Gemini-based job scoring, Vercel deploy with Neon, kanban view for Applications, run-history page, job detail "Tailor a version" button.
+5. **Not built yet:** Telegram morning digest, Gemini-based job scoring, kanban view for Applications, run-history page, job detail "Tailor a version" button, password reset by email (for now the admin can remove and re-invite someone; Google sign-in avoids passwords), a page for each person to edit their own skills profile.
+7. **Google sign-in:** create the OAuth client ([GOOGLE-SIGN-IN.md](GOOGLE-SIGN-IN.md)) and add the two keys.
 6. **Before applying abroad:** check Osmania University on anabin (Germany), the IND recognised-sponsor list (Netherlands), and the 12-month graduate window (Ireland).
