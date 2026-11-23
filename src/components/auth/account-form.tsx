@@ -5,6 +5,7 @@ import { GoogleButton } from '@/app/login/login-form'
 import type { FormState } from '@/app/login/actions'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { PasswordInput } from '@/components/ui/password-input'
 
 type Props = {
   action: (prev: FormState, form: FormData) => Promise<FormState>
@@ -44,22 +45,20 @@ export function AccountForm({ action, email, hidden, ownerPassword, google, subm
         ) : (
           <Input label="Email" name="email" type="email" autoComplete="email" required />
         )}
-        <Input
+        <PasswordInput
           label="Password"
           name="password"
-          type="password"
           autoComplete="new-password"
           required
           minLength={passwordMin}
           maxLength={128}
           hint={`At least ${passwordMin} characters.`}
         />
-        <Input label="Password again" name="confirm" type="password" autoComplete="new-password" required />
+        <PasswordInput label="Password again" name="confirm" autoComplete="new-password" required />
         {ownerPassword && (
-          <Input
+          <PasswordInput
             label="Current Jobber password"
             name="ownerPassword"
-            type="password"
             autoComplete="off"
             required
             hint="The one set with npm run set-password. It proves you're the owner."

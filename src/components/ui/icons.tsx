@@ -126,3 +126,16 @@ export const PersonIcon = (p: IconProps) => (
     <path d="M3.8 17c.8-3.2 3.3-5 6.2-5s5.4 1.8 6.2 5" />
   </svg>
 )
+
+export const EyeIcon = (p: IconProps) => (
+  <svg {...small(p)} strokeWidth={1.5}>
+    <path d="M1.5 8S4 3.5 8 3.5 14.5 8 14.5 8 12 12.5 8 12.5 1.5 8 1.5 8z" />
+    <circle cx="8" cy="8" r="2" />
+  </svg>
+)
+
+export const EyeOffIcon = (p: IconProps) => (
+  <svg {...small(p)} strokeWidth={1.5}>
+    <path d="M6.6 3.7A6.7 6.7 0 0 1 8 3.5c4 0 6.5 4.5 6.5 4.5a11 11 0 0 1-1.7 2.2M10.1 10.2A2 2 0 0 1 5.8 7.9M4.1 4.9C2.5 6 1.5 8 1.5 8S4 12.5 8 12.5c1.2 0 2.3-.4 3.2-1M2 2l12 12" />
+  </svg>
+)
