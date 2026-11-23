@@ -1,6 +1,6 @@
 'use server'
 
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { refresh } from 'next/cache'
 import { getDb } from '@/db'
 import { abouts } from '@/db/schema'
@@ -24,48 +24,61 @@ function clean(input: AboutInput): { value?: { title: string; target: string | n
 }
 
 export async function createAbout(input: AboutInput): Promise<AboutResult> {
-  await requireUser()
+  const user = await requireUser()
   const { value, error } = clean(input)
   if (!value) return { ok: false, error }
   const db = await getDb()
-  const [row] = await db.insert(abouts).values(value).returning({ id: abouts.id })
+  const [row] = await db
+    .insert(abouts)
+    .values({ ...value, userId: user.id })
+    .returning({ id: abouts.id })
   refresh()
   return { ok: true, id: row.id }
 }
 
 export async function updateAbout(id: number, input: AboutInput): Promise<AboutResult> {
-  await requireUser()
+  const user = await requireUser()
   if (!Number.isInteger(id)) return { ok: false, error: 'Not found.' }
   const { value, error } = clean(input)
   if (!value) return { ok: false, error }
   const db = await getDb()
-  await db
+  const updated = await db
     .update(abouts)
     .set({ ...value, updatedAt: new Date() })
-    .where(eq(abouts.id, id))
+    .where(and(eq(abouts.id, id), eq(abouts.userId, user.id)))
+    .returning({ id: abouts.id })
+  if (!updated.length) return { ok: false, error: 'Not found.' }
   refresh()
   return { ok: true, id }
 }
 
 export async function duplicateAbout(id: number): Promise<AboutResult> {
-  await requireUser()
+  const user = await requireUser()
   if (!Number.isInteger(id)) return { ok: false, error: 'Not found.' }
   const db = await getDb()
-  const [src] = await db.select().from(abouts).where(eq(abouts.id, id))
+  const [src] = await db
+    .select()
+    .from(abouts)
+    .where(and(eq(abouts.id, id), eq(abouts.userId, user.id)))
   if (!src) return { ok: false, error: 'Not found.' }
   const [row] = await db
     .insert(abouts)
-    .values({ title: `${src.title} (copy)`.slice(0, ABOUT_TITLE_MAX), target: src.target, text: src.text })
+    .values({
+      userId: user.id,
+      title: `${src.title} (copy)`.slice(0, ABOUT_TITLE_MAX),
+      target: src.target,
+      text: src.text,
+    })
     .returning({ id: abouts.id })
   refresh()
   return { ok: true, id: row.id }
 }
 
 export async function deleteAbout(id: number): Promise<AboutResult> {
-  await requireUser()
+  const user = await requireUser()
   if (!Number.isInteger(id)) return { ok: false, error: 'Not found.' }
   const db = await getDb()
-  await db.delete(abouts).where(eq(abouts.id, id))
+  await db.delete(abouts).where(and(eq(abouts.id, id), eq(abouts.userId, user.id)))
   refresh()
   return { ok: true }
 }

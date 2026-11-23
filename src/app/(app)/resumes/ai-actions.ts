@@ -1,6 +1,6 @@
 'use server'
 
-import { desc } from 'drizzle-orm'
+import { desc, eq } from 'drizzle-orm'
 import { getDb } from '@/db'
 import { abouts } from '@/db/schema'
 import { requireUser } from '@/lib/auth/session'
@@ -39,7 +39,7 @@ function takeSlot(): boolean {
 }
 
 export async function askResumeAssistant(input: AssistantInput): Promise<AssistantResult> {
-  await requireUser()
+  const user = await requireUser()
 
   const prompt = typeof input?.prompt === 'string' ? input.prompt.trim() : ''
   if (!prompt) return { ok: false, error: 'Tell the assistant what to change.' }
@@ -64,7 +64,11 @@ export async function askResumeAssistant(input: AssistantInput): Promise<Assista
 
   try {
     const db = await getDb()
-    const rows = await db.select({ text: abouts.text }).from(abouts).orderBy(desc(abouts.updatedAt))
+    const rows = await db
+      .select({ text: abouts.text })
+      .from(abouts)
+      .where(eq(abouts.userId, user.id))
+      .orderBy(desc(abouts.updatedAt))
     const built = buildAssistantPrompt({
       content,
       prompt,

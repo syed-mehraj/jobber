@@ -3,7 +3,7 @@ import { and, count, desc, eq, gte, inArray, isNotNull, isNull, ne, sql } from '
 import { after, connection } from 'next/server'
 import { getDb } from '@/db'
 import { applications, jobs, resumes, sources, type ApplicationStatus, type Level, type Region } from '@/db/schema'
-import { requireUser } from '@/lib/auth/session'
+import { requireAdmin, requireUser, type CurrentUser } from '@/lib/auth/session'
 import { isStale, lastRun, runSearch } from '@/jobs/run'
 
 /*
@@ -19,6 +19,13 @@ async function db() {
   await connection()
   await requireUser()
   return getDb()
+}
+
+/** The database and the signed-in person. Every per-person query filters by `user.id`. */
+async function ctx(): Promise<{ d: Awaited<ReturnType<typeof getDb>>; user: CurrentUser }> {
+  await connection()
+  const user = await requireUser()
+  return { d: await getDb(), user }
 }
 
 /** Starts a search after the response is sent, if the last one is stale. The next refresh shows the results. */
@@ -40,7 +47,9 @@ function startOfTodayIst(now = new Date()): Date {
 
 /** Still posted and not dismissed. */
 const open = and(isNull(jobs.closedAt), isNull(jobs.dismissedAt))!
-const notApplied = sql`not exists (select 1 from ${applications} where ${applications.jobId} = ${jobs.id})`
+/** The signed-in person hasn't applied to the job. */
+const notApplied = (userId: string) =>
+  sql`not exists (select 1 from ${applications} where ${applications.jobId} = ${jobs.id} and ${applications.userId} = ${userId})`
 
 export type Counts = {
   resumes: number
@@ -54,24 +63,34 @@ export type Counts = {
 }
 
 export async function getCounts(): Promise<Counts> {
-  const d = await db()
+  const { d, user } = await ctx()
+  const mine = eq(applications.userId, user.id)
   const [[r], [m], [t], [a], [i], [w], [o]] = await Promise.all([
-    d.select({ n: count() }).from(resumes),
-    d.select({ n: count() }).from(jobs).where(and(open, notApplied)),
+    d.select({ n: count() }).from(resumes).where(eq(resumes.userId, user.id)),
     d
       .select({ n: count() })
       .from(jobs)
-      .where(and(open, notApplied, gte(jobs.firstSeenAt, startOfTodayIst()))),
+      .where(and(open, notApplied(user.id))),
+    d
+      .select({ n: count() })
+      .from(jobs)
+      .where(and(open, notApplied(user.id), gte(jobs.firstSeenAt, startOfTodayIst()))),
     d
       .select({ n: count() })
       .from(applications)
-      .where(sql`${applications.status} <> 'saved'`),
+      .where(and(mine, sql`${applications.status} <> 'saved'`)),
     d
       .select({ n: count() })
       .from(applications)
-      .where(inArray(applications.status, ['oa', 'interview'])),
-    d.select({ n: count() }).from(applications).where(eq(applications.status, 'applied')),
-    d.select({ n: count() }).from(applications).where(eq(applications.status, 'offer')),
+      .where(and(mine, inArray(applications.status, ['oa', 'interview']))),
+    d
+      .select({ n: count() })
+      .from(applications)
+      .where(and(mine, eq(applications.status, 'applied'))),
+    d
+      .select({ n: count() })
+      .from(applications)
+      .where(and(mine, eq(applications.status, 'offer'))),
   ])
   return {
     resumes: r.n,
@@ -112,7 +131,7 @@ export type JobRow = {
   country: string | null
 }
 
-const jobColumns = {
+const jobColumns = (userId: string) => ({
   id: jobs.id,
   title: jobs.title,
   company: jobs.company,
@@ -131,18 +150,18 @@ const jobColumns = {
   required: jobs.required,
   source: sources.name,
   sourceKind: sources.kind,
-  applied: sql<boolean>`exists (select 1 from ${applications} where ${applications.jobId} = ${jobs.id})`,
+  applied: sql<boolean>`exists (select 1 from ${applications} where ${applications.jobId} = ${jobs.id} and ${applications.userId} = ${userId})`,
   isNew: sql<boolean>`${jobs.firstSeenAt} > now() - interval '24 hours'`,
   country: jobs.country,
-}
+})
 
 export async function getTopMatches(limit = 5): Promise<JobRow[]> {
-  const d = await db()
+  const { d, user } = await ctx()
   return d
-    .select(jobColumns)
+    .select(jobColumns(user.id))
     .from(jobs)
     .innerJoin(sources, eq(sources.id, jobs.sourceId))
-    .where(and(open, notApplied))
+    .where(and(open, notApplied(user.id)))
     .orderBy(desc(jobs.score), desc(jobs.firstSeenAt))
     .limit(limit)
 }
@@ -158,7 +177,7 @@ export type JobFilter = {
 }
 
 export async function getJobs(filter: JobFilter = {}, limit = 200): Promise<{ rows: JobRow[]; total: number }> {
-  const d = await db()
+  const { d, user } = await ctx()
   const where = [open]
   if (filter.scope === 'abroad') where.push(eq(jobs.region, 'international'))
   else if (filter.scope === 'home') where.push(ne(jobs.region, 'international'))
@@ -170,7 +189,7 @@ export async function getJobs(filter: JobFilter = {}, limit = 200): Promise<{ ro
     filter.sort === 'newest' ? [desc(jobs.firstSeenAt), desc(jobs.score)] : [desc(jobs.score), desc(jobs.firstSeenAt)]
   const [rows, [{ n }]] = await Promise.all([
     d
-      .select(jobColumns)
+      .select(jobColumns(user.id))
       .from(jobs)
       .innerJoin(sources, eq(sources.id, jobs.sourceId))
       .where(and(...where))
@@ -253,8 +272,11 @@ export type SourceRow = {
   lastKept: number
 }
 
+/** Admin only: the source list names the unofficial big-tech readers. */
 export async function getSources(): Promise<SourceRow[]> {
-  const d = await db()
+  await connection()
+  await requireAdmin()
+  const d = await getDb()
   return d
     .select({
       id: sources.id,
@@ -282,7 +304,7 @@ export type ApplicationRow = {
 }
 
 export async function getApplications(): Promise<ApplicationRow[]> {
-  const d = await db()
+  const { d, user } = await ctx()
   return d
     .select({
       id: applications.id,
@@ -296,6 +318,7 @@ export async function getApplications(): Promise<ApplicationRow[]> {
     })
     .from(applications)
     .innerJoin(jobs, eq(jobs.id, applications.jobId))
+    .where(eq(applications.userId, user.id))
     .orderBy(desc(applications.appliedAt))
 }
 
@@ -304,10 +327,10 @@ export type JobDetail = JobRow & { summary: string | null; closed: boolean; dism
 /** One job with its description, for the Jobs side panel. */
 export async function getJob(id: number): Promise<JobDetail | null> {
   if (!Number.isInteger(id)) return null
-  const d = await db()
+  const { d, user } = await ctx()
   const [row] = await d
     .select({
-      ...jobColumns,
+      ...jobColumns(user.id),
       summary: jobs.summary,
       closed: sql<boolean>`${jobs.closedAt} is not null`,
       dismissed: sql<boolean>`${jobs.dismissedAt} is not null`,

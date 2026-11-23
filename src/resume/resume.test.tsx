@@ -98,30 +98,103 @@ describe('Simple template', () => {
   })
 })
 
-describe('seeding', () => {
-  it('adds the master resume once and sets the profile skills from it', async () => {
+describe('accounts: owner claim and new-person start', () => {
+  const setup = async () => {
     const { createTestDb } = await import('@/db/testing')
-    const { syncCatalog } = await import('@/db/seed')
-    const { resumes, settings } = await import('@/db/schema')
-    const { defaultProfile } = await import('@/jobs/score')
+    const schema = await import('@/db/schema')
     const db = await createTestDb({ seed: true })
+    const addUser = (id: string, role: 'admin' | 'user') =>
+      db.insert(schema.users).values({ id, name: `${id} Person`, email: `${id}@example.com`, role })
+    return { db, schema, addUser }
+  }
 
-    const rows = await db.select().from(resumes)
+  it('the catalog seed adds no personal data', async () => {
+    const { db, schema } = await setup()
+    expect(await db.select().from(schema.resumes)).toHaveLength(0)
+    expect(await db.select().from(schema.abouts)).toHaveLength(0)
+  }, 30_000)
+
+  it("on a new database the owner gets the master resume, About you and a profile from the resume's skills", async () => {
+    const { db, schema, addUser } = await setup()
+    const { claimForOwner } = await import('@/lib/auth/onboard')
+    const { defaultProfile } = await import('@/jobs/score')
+    await addUser('owner', 'admin')
+    await claimForOwner(db, 'owner')
+    await claimForOwner(db, 'owner') // a second run changes nothing
+
+    const rows = await db.select().from(schema.resumes)
     expect(rows).toHaveLength(1)
-    expect(rows[0]).toMatchObject({ name: 'Master resume', isMaster: true })
+    expect(rows[0]).toMatchObject({ userId: 'owner', name: 'Master resume', isMaster: true })
     expect(toContent(rows[0].content)).toEqual(masterResume)
-
-    const { eq } = await import('drizzle-orm')
-    const [profile] = await db.select().from(settings).where(eq(settings.key, 'profile'))
-    expect(profile.value).toEqual({ skills: allSkills(masterResume), preferred: defaultProfile.preferred })
-
-    const { abouts } = await import('@/db/schema')
-    const aboutRows = await db.select().from(abouts)
+    const aboutRows = await db.select().from(schema.abouts)
     expect(aboutRows).toHaveLength(1)
+    expect(aboutRows[0]).toMatchObject({ userId: 'owner' })
     expect(aboutRows[0].text).toContain('AI Engineer at Parcera')
+    const [profile] = await db.select().from(schema.profiles)
+    expect(profile).toMatchObject({
+      userId: 'owner',
+      skills: allSkills(masterResume),
+      preferred: defaultProfile.preferred,
+    })
+  }, 30_000)
 
-    await syncCatalog(db) // a second run changes nothing
-    expect(await db.select().from(resumes)).toHaveLength(1)
-    expect(await db.select().from(abouts)).toHaveLength(1)
+  it('the owner takes over rows from before accounts, and the old profile', async () => {
+    const { db, schema, addUser } = await setup()
+    const { claimForOwner } = await import('@/lib/auth/onboard')
+    await db.insert(schema.resumes).values([
+      { name: 'Old master', isMaster: true, content: masterResume },
+      { name: 'Old version', isMaster: false, content: masterResume },
+    ])
+    await db.insert(schema.abouts).values({ title: 'Old about', text: 'Written before accounts.' })
+    await db.insert(schema.settings).values({ key: 'profile', value: { skills: ['rust'], preferred: ['Backend'] } })
+    await addUser('owner', 'admin')
+    await claimForOwner(db, 'owner')
+
+    const rows = await db.select().from(schema.resumes)
+    expect(rows.map((r) => [r.name, r.userId]).sort()).toEqual([
+      ['Old master', 'owner'],
+      ['Old version', 'owner'],
+    ])
+    const aboutRows = await db.select().from(schema.abouts)
+    expect(aboutRows.map((a) => [a.title, a.userId])).toEqual([['Old about', 'owner']])
+    const [profile] = await db.select().from(schema.profiles)
+    expect(profile).toMatchObject({ skills: ['rust'], preferred: ['Backend'] })
+  }, 30_000)
+
+  it("an invited person starts with an empty master resume with their name and email, and none of the owner's data", async () => {
+    const { db, schema, addUser } = await setup()
+    const { claimForOwner, startFresh } = await import('@/lib/auth/onboard')
+    const { eq } = await import('drizzle-orm')
+    await addUser('owner', 'admin')
+    await claimForOwner(db, 'owner')
+    await addUser('friend', 'user')
+    await startFresh(db, 'friend', 'friend@example.com')
+    await startFresh(db, 'friend', 'friend@example.com') // once only
+
+    const mine = await db.select().from(schema.resumes).where(eq(schema.resumes.userId, 'friend'))
+    expect(mine).toHaveLength(1)
+    const content = toContent(mine[0].content)!
+    expect(content.contact).toMatchObject({ name: 'friend Person', email: 'friend@example.com' })
+    expect(content.experience.items).toHaveLength(0)
+    expect(content.education.items).toHaveLength(0)
+    expect(JSON.stringify(content)).not.toContain(masterResume.contact.name)
+    expect(await db.select().from(schema.abouts).where(eq(schema.abouts.userId, 'friend'))).toHaveLength(0)
+    const [profile] = await db.select().from(schema.profiles).where(eq(schema.profiles.userId, 'friend'))
+    expect(profile.skills).toEqual([])
+  }, 30_000)
+
+  it("deleting a person deletes their data and leaves everyone else's", async () => {
+    const { db, schema, addUser } = await setup()
+    const { claimForOwner, startFresh } = await import('@/lib/auth/onboard')
+    const { eq } = await import('drizzle-orm')
+    await addUser('owner', 'admin')
+    await claimForOwner(db, 'owner')
+    await addUser('friend', 'user')
+    await startFresh(db, 'friend', 'friend@example.com')
+    await db.delete(schema.users).where(eq(schema.users.id, 'friend'))
+    const left = await db.select().from(schema.resumes)
+    expect(left.every((r) => r.userId === 'owner')).toBe(true)
+    expect(left.length).toBeGreaterThan(0)
+    expect(await db.select().from(schema.profiles).where(eq(schema.profiles.userId, 'friend'))).toHaveLength(0)
   }, 30_000)
 })

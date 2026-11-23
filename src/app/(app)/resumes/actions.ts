@@ -17,7 +17,7 @@ export type CreateState = { error?: string }
 
 /** New resume: a copy of the master (or of another version), or a blank one with your contact details. */
 export async function createResume(_prev: CreateState, form: FormData): Promise<CreateState> {
-  await requireUser()
+  const user = await requireUser()
   const name = String(form.get('name') ?? '').trim()
   const target = String(form.get('target') ?? '').trim()
   const from = String(form.get('from') ?? 'master')
@@ -25,7 +25,7 @@ export async function createResume(_prev: CreateState, form: FormData): Promise<
   if (name.length > NAME_MAX || target.length > NAME_MAX) return { error: `Keep names under ${NAME_MAX} characters.` }
 
   const db = await getDb()
-  const all = await db.select().from(resumes)
+  const all = await db.select().from(resumes).where(eq(resumes.userId, user.id))
   const master = all.find((r) => r.isMaster)
   const masterContent = toContent(master?.content) ?? masterResume
 
@@ -44,6 +44,7 @@ export async function createResume(_prev: CreateState, form: FormData): Promise<
   const [row] = await db
     .insert(resumes)
     .values({
+      userId: user.id,
       name: name.slice(0, NAME_MAX),
       target: target || null,
       isMaster: false,
@@ -61,7 +62,7 @@ export async function saveResume(
   id: number,
   input: { content: unknown; design: unknown; name: string; target: string },
 ): Promise<SaveResult> {
-  await requireUser()
+  const user = await requireUser()
   if (!Number.isInteger(id)) return { ok: false, error: 'Not found.' }
   const content = toContent(input.content)
   if (!content) return { ok: false, error: 'The resume data is not valid.' }
@@ -84,7 +85,7 @@ export async function saveResume(
           .slice(0, NAME_MAX) || null,
       updatedAt: now,
     })
-    .where(eq(resumes.id, id))
+    .where(and(eq(resumes.id, id), eq(resumes.userId, user.id)))
     .returning({ id: resumes.id })
   if (!updated.length) return { ok: false, error: 'Not found.' }
   return { ok: true, savedAt: now.toISOString() }
@@ -92,10 +93,10 @@ export async function saveResume(
 
 /** Deletes a version. The master resume can't be deleted. */
 export async function deleteResume(id: number): Promise<void> {
-  await requireUser()
+  const user = await requireUser()
   if (!Number.isInteger(id)) return
   const db = await getDb()
-  await db.delete(resumes).where(and(eq(resumes.id, id), eq(resumes.isMaster, false)))
+  await db.delete(resumes).where(and(eq(resumes.id, id), eq(resumes.userId, user.id), eq(resumes.isMaster, false)))
   refresh()
   redirect('/resumes')
 }

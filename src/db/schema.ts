@@ -104,6 +104,8 @@ export const applications = pgTable(
   'applications',
   {
     id: serial('id').primaryKey(),
+    /** Whose application. Null only for rows from before accounts, until the owner claims them on /setup. */
+    userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }),
     jobId: integer('job_id')
       .notNull()
       .references(() => jobs.id, { onDelete: 'cascade' }),
@@ -112,7 +114,7 @@ export const applications = pgTable(
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
     notes: text('notes'),
   },
-  (t) => [uniqueIndex('applications_job').on(t.jobId)],
+  (t) => [uniqueIndex('applications_user_job').on(t.userId, t.jobId)],
 )
 
 /** One row per search run, so the menu and the run history can show what happened. */
@@ -131,33 +133,44 @@ export const runs = pgTable('runs', {
 })
 
 /** Resumes: the master and its versions. The editor (Phase 3) fills `content`. */
-export const resumes = pgTable('resumes', {
-  id: serial('id').primaryKey(),
-  name: text('name').notNull(),
-  isMaster: boolean('is_master').notNull().default(false),
-  content: jsonb('content').$type<Record<string, unknown>>().notNull().default({}),
-  /** Template, font and accent chosen in the editor (see src/resume/design.ts). */
-  design: jsonb('design').$type<Record<string, unknown>>().notNull().default({}),
-  /** Optional: the company or role this version is for. */
-  target: text('target'),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-})
+export const resumes = pgTable(
+  'resumes',
+  {
+    id: serial('id').primaryKey(),
+    /** Whose resume. Null only for rows from before accounts, until the owner claims them on /setup. */
+    userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    isMaster: boolean('is_master').notNull().default(false),
+    content: jsonb('content').$type<Record<string, unknown>>().notNull().default({}),
+    /** Template, font and accent chosen in the editor (see src/resume/design.ts). */
+    design: jsonb('design').$type<Record<string, unknown>>().notNull().default({}),
+    /** Optional: the company or role this version is for. */
+    target: text('target'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('resumes_user').on(t.userId)],
+)
 
 /**
  * "About you" descriptions: the owner's own words about their work, one per kind of application
  * (e.g. a general one, one for an AI role, one for a Salesforce-admin role). Copied into applications and
  * read for matching.
  */
-export const abouts = pgTable('abouts', {
-  id: serial('id').primaryKey(),
-  title: text('title').notNull(),
-  /** Optional: the company or role it was written for. */
-  target: text('target'),
-  text: text('text').notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-})
+export const abouts = pgTable(
+  'abouts',
+  {
+    id: serial('id').primaryKey(),
+    userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }),
+    title: text('title').notNull(),
+    /** Optional: the company or role it was written for. */
+    target: text('target'),
+    text: text('text').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('abouts_user').on(t.userId)],
+)
 
 /** Raw bytes (Postgres bytea). PGlite and node-postgres both hand back a Uint8Array/Buffer. */
 const bytea = customType<{ data: Uint8Array; driverData: Uint8Array }>({ dataType: () => 'bytea' })
@@ -165,6 +178,7 @@ const bytea = customType<{ data: Uint8Array; driverData: Uint8Array }>({ dataTyp
 /** Uploaded resume files (the original PDF/Word), kept next to the editable copy made from them. */
 export const resumeFiles = pgTable('resume_files', {
   id: serial('id').primaryKey(),
+  userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }),
   resumeId: integer('resume_id').references(() => resumes.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
   mime: text('mime').notNull(),
@@ -275,3 +289,20 @@ export const invites = pgTable(
   },
   (t) => [index('invites_email').on(t.email)],
 )
+
+/** What each person's matches are scored against: their skills (plus those found in their resume and About you). */
+export const profiles = pgTable('profiles', {
+  userId: text('user_id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  skills: text('skills')
+    .array()
+    .notNull()
+    .default(sql`'{}'::text[]`),
+  /** Job categories to favour, e.g. "ML / AI", "Backend". */
+  preferred: text('preferred')
+    .array()
+    .notNull()
+    .default(sql`'{}'::text[]`),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+})

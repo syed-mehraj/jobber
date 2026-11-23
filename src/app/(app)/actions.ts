@@ -1,6 +1,6 @@
 'use server'
 
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { refresh } from 'next/cache'
 import { getDb } from '@/db'
 import { applications, jobs, type ApplicationStatus } from '@/db/schema'
@@ -11,28 +11,31 @@ const STATUSES: ApplicationStatus[] = ['saved', 'applied', 'oa', 'interview', 'o
 
 /** "Did you apply?" → Yes. */
 export async function markApplied(jobId: number): Promise<void> {
-  await requireUser()
+  const user = await requireUser()
   if (!Number.isInteger(jobId)) return
   const db = await getDb()
   const [job] = await db.select({ id: jobs.id }).from(jobs).where(eq(jobs.id, jobId))
   if (!job) return
-  await db.insert(applications).values({ jobId, status: 'applied' }).onConflictDoNothing()
+  await db.insert(applications).values({ userId: user.id, jobId, status: 'applied' }).onConflictDoNothing()
   refresh()
 }
 
 export async function setApplicationStatus(id: number, status: ApplicationStatus): Promise<void> {
-  await requireUser()
+  const user = await requireUser()
   if (!Number.isInteger(id) || !STATUSES.includes(status)) return
   const db = await getDb()
-  await db.update(applications).set({ status, updatedAt: new Date() }).where(eq(applications.id, id))
+  await db
+    .update(applications)
+    .set({ status, updatedAt: new Date() })
+    .where(and(eq(applications.id, id), eq(applications.userId, user.id)))
   refresh()
 }
 
 export async function removeApplication(id: number): Promise<void> {
-  await requireUser()
+  const user = await requireUser()
   if (!Number.isInteger(id)) return
   const db = await getDb()
-  await db.delete(applications).where(eq(applications.id, id))
+  await db.delete(applications).where(and(eq(applications.id, id), eq(applications.userId, user.id)))
   refresh()
 }
 

@@ -19,7 +19,7 @@ const MAX_BYTES = 5 * 1024 * 1024
  * mode "edit" opens the editor; mode "save" returns to the Resumes list.
  */
 export async function uploadResume(_prev: UploadState, form: FormData): Promise<UploadState> {
-  await requireUser()
+  const user = await requireUser()
   const file = form.get('file')
   if (!(file instanceof File) || file.size === 0) return { error: 'Choose a file to upload.' }
   if (file.size > MAX_BYTES) return { error: 'The file is larger than 5 MB.' }
@@ -51,9 +51,10 @@ export async function uploadResume(_prev: UploadState, form: FormData): Promise<
   const db = await getDb()
   const [row] = await db
     .insert(resumes)
-    .values({ name, target: target || null, isMaster: false, content, design: defaultDesign })
+    .values({ userId: user.id, name, target: target || null, isMaster: false, content, design: defaultDesign })
     .returning({ id: resumes.id })
   await db.insert(resumeFiles).values({
+    userId: user.id,
     resumeId: row.id,
     name: file.name.slice(0, 200),
     mime: file.type || 'application/octet-stream',
