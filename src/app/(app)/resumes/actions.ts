@@ -9,6 +9,7 @@ import { requireUser } from '@/lib/auth/session'
 import { rescoreLater } from '@/lib/rescore-later'
 import { toDesign } from '@/resume/design'
 import { blankResume } from '@/resume/edit-ops'
+import { MAX_RESUMES } from '@/resume/limits'
 import { masterResume } from '@/resume/master'
 import { toContent, type ResumeContent } from '@/resume/types'
 
@@ -27,6 +28,7 @@ export async function createResume(_prev: CreateState, form: FormData): Promise<
 
   const db = await getDb()
   const all = await db.select().from(resumes).where(eq(resumes.userId, user.id))
+  if (all.length >= MAX_RESUMES) return { error: `You can keep up to ${MAX_RESUMES} resumes. Delete one first.` }
   const master = all.find((r) => r.isMaster)
   const masterContent = toContent(master?.content) ?? masterResume
 

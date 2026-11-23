@@ -56,6 +56,8 @@ function options(db: DB) {
     account: {
       // Signing in with Google using the email of an existing account adds Google to that account.
       accountLinking: { enabled: true, trustedProviders: ['google'] },
+      // Google's access/refresh tokens aren't used, but encrypt them at rest anyway.
+      encryptOAuthTokens: true,
     },
     session: { expiresIn: 60 * 60 * 24 * 30, updateAge: 60 * 60 * 24 },
     // Sign-up happens only through the invite and setup server actions.
@@ -74,7 +76,7 @@ function options(db: DB) {
     databaseHooks: {
       user: {
         create: {
-          before: async (user: { email: string } & Record<string, unknown>) => {
+          before: async (user: { email: string; emailVerified?: boolean } & Record<string, unknown>) => {
             const email = normalizeEmail(user.email)
             const pass = signupGate.getStore()
             let role: Role
@@ -87,7 +89,8 @@ function options(db: DB) {
               }
               role = pass.role
             } else {
-              // Google: only an invited email. Google has verified that the person owns it.
+              // Google: only an invited email, and only one Google says is verified.
+              if (user.emailVerified !== true) return false
               if (!(await findInviteByEmail(db, email))) return false
               role = 'user'
             }

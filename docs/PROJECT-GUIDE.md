@@ -358,6 +358,11 @@ Unofficial big-tech jobs (Amazon, Google, Microsoft, Netflix) are shown only to 
 | Roles | `admin` (the owner) or `user`; can't be set from a request. Admin-only: `/admin`, Companies and sources, unofficial jobs |
 | Route protection | `src/proxy.ts` redirects requests without a session cookie; every data read and server action checks the session in the database (`requireUser` / `requireAdmin`) and filters by the person's id; updates and deletes use id **and** owner |
 | Rate limits | Sign-in 10 tries per 5 minutes per IP (stored in the database, so it holds across Vercel instances); AI as in §9 |
+| Setup | `/setup` works only until the admin exists; 5 wrong setup passwords lock it for 15 minutes (counted in the database) |
+| Google | Only accounts whose email Google marks verified; Google's tokens are encrypted at rest (XChaCha20-Poly1305) |
+| Storage caps | Per person: 50 resumes, 20 uploaded files / 40 MB |
+| Headers | `X-Frame-Options: DENY` + `frame-ancestors 'none'` (no clickjacking), `nosniff`, `Referrer-Policy: strict-origin-when-cross-origin` (invite links don't leak in Referer) |
+| Reviewed | An independent review (23 Nov 2026) found no high-severity issues; the low ones above were fixed. Known limits: sign-in rate limit is per IP, not per email; no password reset by email yet |
 | Removing someone | Deletes their account, sessions and all their data (cascade); open sessions stop working at once |
 | Cron | `/api/cron` needs `Authorization: Bearer CRON_SECRET` (constant-time compare) |
 | Secrets | Only in `.env.local` / Vercel settings; none prefixed `NEXT_PUBLIC_`; Gemini key server-only and never logged |

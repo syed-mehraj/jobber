@@ -83,6 +83,13 @@ describe('accounts', () => {
     expect(refused).toBeNull()
     expect(await db.select().from(users)).toHaveLength(0)
 
+    // Invited, but Google says the email isn't verified: refused.
+    await createInvite(db, 'unverified@example.com', null)
+    const unverified = await ctx.internalAdapter
+      .createUser({ name: 'U', email: 'unverified@example.com', emailVerified: false }, google)
+      .catch(() => null)
+    expect(unverified).toBeNull()
+
     const { token } = await createInvite(db, 'Friend@Example.com', null)
     expect(await findInviteByToken(db, token)).not.toBeNull()
     const user = await ctx.internalAdapter.createUser(

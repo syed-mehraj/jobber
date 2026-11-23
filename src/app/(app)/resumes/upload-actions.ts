@@ -1,11 +1,13 @@
 'use server'
 
+import { eq, sql } from 'drizzle-orm'
 import { redirect } from 'next/navigation'
 import { getDb } from '@/db'
 import { resumeFiles, resumes } from '@/db/schema'
 import { takeAiRequest } from '@/lib/ai/limits'
 import { requireUser } from '@/lib/auth/session'
 import { defaultDesign } from '@/resume/design'
+import { MAX_RESUMES } from '@/resume/limits'
 import { aiParseResume } from '@/resume/import/ai-parse'
 import { extractText, UnsupportedFileError } from '@/resume/import/extract'
 import { parseResumeText } from '@/resume/import/parse'
@@ -13,6 +15,9 @@ import { parseResumeText } from '@/resume/import/parse'
 export type UploadState = { error?: string }
 
 const MAX_BYTES = 5 * 1024 * 1024
+/** Per person, so one account can't fill the shared database. */
+const MAX_FILES = 20
+const MAX_TOTAL_BYTES = 40 * 1024 * 1024
 
 /**
  * Upload a resume (PDF, Word .docx or text). The original file is stored, and its text is read into an
@@ -33,6 +38,19 @@ export async function uploadResume(_prev: UploadState, form: FormData): Promise<
       .trim()
       .slice(0, 120) || file.name.replace(/\.[a-z0-9]+$/i, '').slice(0, 120)
 
+  const db = await getDb()
+  const [usage] = await db
+    .select({ files: sql<number>`count(*)::int`, bytes: sql<number>`coalesce(sum(${resumeFiles.size}), 0)::int` })
+    .from(resumeFiles)
+    .where(eq(resumeFiles.userId, user.id))
+  if (usage.files >= MAX_FILES || usage.bytes + file.size > MAX_TOTAL_BYTES)
+    return { error: `You can keep up to ${MAX_FILES} uploaded files (40 MB). Delete an uploaded resume first.` }
+  const [{ n }] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(resumes)
+    .where(eq(resumes.userId, user.id))
+  if (n >= MAX_RESUMES) return { error: `You can keep up to ${MAX_RESUMES} resumes. Delete one first.` }
+
   const bytes = new Uint8Array(await file.arrayBuffer())
   let text: string
   try {
@@ -47,7 +65,6 @@ export async function uploadResume(_prev: UploadState, form: FormData): Promise<
     }
   }
 
-  const db = await getDb()
   // Reading with Gemini counts towards the person's daily AI requests; past the limit the built-in parser reads it.
   const useAi = Boolean(process.env.GEMINI_API_KEY) && (await takeAiRequest(db, user.id, user.role))
   const content = (useAi ? await aiParseResume(text) : null) ?? parseResumeText(text).content
