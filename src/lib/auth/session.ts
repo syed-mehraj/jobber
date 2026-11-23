@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { cache } from 'react'
 import type { Role } from '@/db/schema'
 import { getAuth } from './auth'
+import { isOwnerEmail } from './owner'
 
 export type CurrentUser = { id: string; name: string; email: string; role: Role; image: string | null }
 
@@ -17,7 +18,8 @@ export const getUser = cache(async (): Promise<CurrentUser | null> => {
     id: u.id,
     name: u.name,
     email: u.email,
-    role: (u as { role?: string }).role === 'admin' ? 'admin' : 'user',
+    // Admin only for the owner set in the environment (OWNER_EMAIL), whatever the database says.
+    role: (u as { role?: string }).role === 'admin' && isOwnerEmail(u.email) ? 'admin' : 'user',
     image: u.image ?? null,
   }
 })

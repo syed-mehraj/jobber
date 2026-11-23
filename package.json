@@ -10,7 +10,6 @@
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
     "format": "prettier --write .",
-    "set-password": "node scripts/set-password.mjs",
     "db:generate": "drizzle-kit generate"
   },
   "dependencies": {

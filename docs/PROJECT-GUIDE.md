@@ -39,8 +39,8 @@ A private, invite-only web app, built for one job seeker (Syed: B.E. AI & ML, MJ
 
 1. In the `jobber` folder: `npm install`.
    On this Mac npm needs: `NODE_OPTIONS="--dns-result-order=ipv4first --no-network-family-autoselection"` (your traffic goes through a VPN tunnel and Node's automatic IPv4/IPv6 choice times out).
-2. `npm run set-password` → type a password twice. Only its **scrypt hash** is saved, to `.env.local`, plus a random `SESSION_SECRET` (also signs sign-in sessions) and `CRON_SECRET`. This password is the **setup password**: it proves you're the owner once, on `/setup`.
-3. `npm run dev` → open `http://localhost:3000` → **Set up Jobber** (`/setup`): your name, email, a new account password and the setup password. That creates the admin account and moves everything stored so far into it. After that you sign in with email + password (or Google).
+2. In `.env.local` set `OWNER_EMAIL`, `OWNER_NAME`, `OWNER_PASSWORD_HASH` (how to make the hash is in `.env.example`), `SESSION_SECRET` and `CRON_SECRET`. The owner is the only admin.
+3. `npm run dev` → open `http://localhost:3000` → sign in with the owner email and password. The owner account is created when the app starts, and everything stored before accounts moves into it. There is no setup page.
 4. Invite people on **People and invites** (`/admin`, in the ☰ menu): enter their email → copy the link → send it. The first visit starts a job search; refresh after a minute.
 5. Optional: add `GEMINI_API_KEY=your-key` to `.env.local`, restart → the AI assistant and smarter upload parsing turn on.
 6. Optional: Google sign-in → follow [GOOGLE-SIGN-IN.md](GOOGLE-SIGN-IN.md) to add `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`.
@@ -49,7 +49,7 @@ Checks: `npm test` · `npm run lint` · `npm run typecheck` · `npm run build`.
 
 | Variable in `.env.local` (git-ignored) | What it's for |
 |---|---|
-| `APP_PASSWORD_HASH` | scrypt hash of the setup password (used once on `/setup`) |
+| `OWNER_EMAIL`, `OWNER_NAME`, `OWNER_PASSWORD_HASH` | the owner, the only admin: created or updated from these on start; the password only as a Better Auth scrypt hash (a new hash changes the password and signs the owner out) |
 | `SESSION_SECRET` | signs sign-in sessions (Better Auth's secret; `BETTER_AUTH_SECRET` overrides it) |
 | `BETTER_AUTH_URL` | the site's address, e.g. `https://jobber-ten-silk.vercel.app`; optional locally (any `localhost` port works) and on Vercel (the production address is used) |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | "Continue with Google"; hidden when unset ([GOOGLE-SIGN-IN.md](GOOGLE-SIGN-IN.md)) |
@@ -69,7 +69,6 @@ Checks: `npm test` · `npm run lint` · `npm run typecheck` · `npm run build`.
 | Page | Route | What you do there |
 |---|---|---|
 | Sign in | `/login` | Email + password, or **Continue with Google** |
-| Set up | `/setup` | Once: create the owner (admin) account with the setup password |
 | Create account | `/signup?invite=…` | From an invite link: name + password, or Google with the invited email |
 | People and invites (admin) | `/admin` | Invite by email (link shown once, 14 days, single use), open invites (Revoke), people (Remove) |
 | Dashboard | `/` | Greeting (India time), 3 stat cards with context (open matches + "new today", applied + "waiting to hear back", tests & interviews), today's 5 best matches |
@@ -338,7 +337,7 @@ Tested end to end: your master resume printed to PDF and uploaded came back with
 
 ## 12. Accounts, sign-in, privacy and security
 
-**Who can get in:** invite-only. The owner claims the admin account once on `/setup` (needs the setup password from `npm run set-password`). The admin invites people by email on `/admin`; each person opens their link and either sets a password or uses Google with that email. Google sign-in for an email without an invite is refused ("That Google account has no invite").
+**Who can get in:** invite-only. The owner (the only admin) is set in the environment: `OWNER_EMAIL` + `OWNER_PASSWORD_HASH` (`src/lib/auth/owner.ts`); the account is created or updated from them when the app starts. The admin invites people by email on `/admin`; each person opens their link and either sets a password or uses Google with that email. Google sign-in for an email without an invite is refused ("That Google account has no invite").
 
 **What is shared and what is yours:**
 
@@ -353,12 +352,11 @@ Unofficial big-tech jobs (Amazon, Google, Microsoft, Netflix) are shown only to 
 | Library | Better Auth 1.7.25 (`src/lib/auth/auth.ts`), Drizzle adapter, sessions in the database, 30 days |
 | Passwords | Better Auth's scrypt hashing; 10–128 characters |
 | Google | OAuth with state + PKCE; callback `/api/auth/callback/google`; signing in with Google using an existing account's email links Google to it |
-| Sign-up | The public sign-up endpoint is disabled. Accounts are created only by the invite and setup server actions (`src/app/login/actions.ts`), inside a gate that a database hook checks; Google creates one only for an invited email |
+| Sign-up | The public sign-up endpoint is disabled. Accounts are created only by the invite server action (`src/app/login/actions.ts`) and, for the owner, from the environment, inside a gate that a database hook checks; Google creates one only for an invited email |
 | Invites | 32 random bytes in the link; only a SHA-256 hash stored; single use; 14 days; revocable |
-| Roles | `admin` (the owner) or `user`; can't be set from a request. Admin-only: `/admin`, Companies and sources, unofficial jobs |
+| Roles | `admin` (the owner) or `user`; can't be set from a request. Admin needs **both** the admin role **and** the `OWNER_EMAIL` address, so nobody else can be admin even if the database says so; anyone else marked admin is turned into a user on start. Admin-only: `/admin`, Companies and sources, unofficial jobs |
 | Route protection | `src/proxy.ts` redirects requests without a session cookie; every data read and server action checks the session in the database (`requireUser` / `requireAdmin`) and filters by the person's id; updates and deletes use id **and** owner |
 | Rate limits | Sign-in 10 tries per 5 minutes per IP (stored in the database, so it holds across Vercel instances); AI as in §9 |
-| Setup | `/setup` works only until the admin exists; 5 wrong setup passwords lock it for 15 minutes (counted in the database) |
 | Google | Only accounts whose email Google marks verified; Google's tokens are encrypted at rest (XChaCha20-Poly1305) |
 | Storage caps | Per person: 50 resumes, 20 uploaded files / 40 MB |
 | Headers | `X-Frame-Options: DENY` + `frame-ancestors 'none'` (no clickjacking), `nosniff`, `Referrer-Policy: strict-origin-when-cross-origin` (invite links don't leak in Referer) |
@@ -402,8 +400,8 @@ Drizzle schema in `src/db/schema.ts`; SQL migrations in `drizzle/` (0000–0009)
 src/
   app/
     layout.tsx, globals.css                 root layout, Inter font, design tokens
-    login/                                  sign-in page + actions (invite sign-up, owner setup, sign out)
-    signup/, setup/                         create an account from an invite; claim the owner account once
+    login/                                  sign-in page + actions (invite sign-up, sign out)
+    signup/                                 create an account from an invite
     api/auth/[...all]/route.ts              Better Auth endpoints (sign-in, Google callback, session…)
     api/cron/route.ts                       scheduled search (CRON_SECRET)
     (app)/admin/                            People and invites (admin)
@@ -433,11 +431,10 @@ src/
     render.tsx, themes.ts, design.ts, fonts.ts   templates and fonts
     master.ts, about.ts                     your master resume and first About-you text
     ai.ts, import/                          AI prompt/validation; upload extract/parse/ai-parse
-  lib/auth/                                 auth.ts (Better Auth), session.ts (getUser/requireUser/requireAdmin), invites, gate, onboard (owner claim, new-person start), client
+  lib/auth/                                 auth.ts (Better Auth), session.ts (getUser/requireUser/requireAdmin), invites, gate, owner (owner account from the environment), onboard (owner claim, new-person start), client
   lib/                                      data access, admin reads, AI limits, format, programs, countries guide, resumes, Gemini client
   proxy.ts                                  route protection
 docs/                                       PLAN, DESIGN, DASHBOARD, SOURCES, ABROAD, MULTI-USER-PLAN, GOOGLE-SIGN-IN, this guide
-scripts/set-password.mjs                    setup password
 .githooks/pre-commit                        secret / phone-number blocker
 ```
 

@@ -105,7 +105,7 @@ export const applications = pgTable(
   'applications',
   {
     id: serial('id').primaryKey(),
-    /** Whose application. Null only for rows from before accounts, until the owner claims them on /setup. */
+    /** Whose application. Null only for rows from before accounts, until the owner account is created (they move to the owner). */
     userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }),
     jobId: integer('job_id')
       .notNull()
@@ -138,7 +138,7 @@ export const resumes = pgTable(
   'resumes',
   {
     id: serial('id').primaryKey(),
-    /** Whose resume. Null only for rows from before accounts, until the owner claims them on /setup. */
+    /** Whose resume. Null only for rows from before accounts, until the owner account is created (they move to the owner). */
     userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }),
     name: text('name').notNull(),
     isMaster: boolean('is_master').notNull().default(false),
@@ -197,7 +197,7 @@ export const settings = pgTable('settings', {
 
 /*
  * Accounts (Better Auth). Field names follow Better Auth's model; see src/lib/auth/auth.ts.
- * `role` is "admin" for the owner who claimed the workspace on /setup, "user" for everyone invited.
+ * `role` is "admin" for the owner (OWNER_EMAIL in the environment), "user" for everyone invited.
  */
 export type Role = 'admin' | 'user'
 

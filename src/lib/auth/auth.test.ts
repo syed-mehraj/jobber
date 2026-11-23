@@ -1,25 +1,16 @@
 import { eq } from 'drizzle-orm'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { DB } from '@/db'
-import { invites, users } from '@/db/schema'
+import { invites, resumes, sessions, users } from '@/db/schema'
 import { createTestDb } from '@/db/testing'
-import { hashPassword, verifyPassword } from './password'
+import { hashPassword } from 'better-auth/crypto'
 
 vi.mock('server-only', () => ({}))
 
 const { createAuth } = await import('./auth')
 const { signupGate } = await import('./gate')
+const { ensureOwner, isOwnerEmail } = await import('./owner')
 const { createInvite, findInviteByEmail, findInviteByToken, hashInviteToken } = await import('./invites')
-
-describe('password (owner setup check)', () => {
-  it('verifies the right password and rejects others', async () => {
-    const hash = await hashPassword('correct horse battery')
-    expect(hash).toMatch(/^scrypt:[\w-]+:[\w-]+$/)
-    expect(await verifyPassword('correct horse battery', hash)).toBe(true)
-    expect(await verifyPassword('wrong', hash)).toBe(false)
-    expect(await verifyPassword('anything', undefined)).toBe(false)
-  })
-})
 
 describe('accounts', () => {
   let db: DB
@@ -42,16 +33,81 @@ describe('accounts', () => {
     db = await createTestDb()
     auth = createAuth(db)
   })
+  afterEach(() => vi.unstubAllEnvs())
 
-  it('creates the admin only through the setup gate, and only once', async () => {
+  it('makes an admin only for OWNER_EMAIL, and only once', async () => {
+    vi.stubEnv('OWNER_EMAIL', 'Owner@Example.com')
     await signupGate.run({ email: 'owner@example.com', role: 'admin' }, () => signUp('Owner@Example.com'))
     const [owner] = await db.select().from(users)
     expect(owner).toMatchObject({ email: 'owner@example.com', role: 'admin', emailVerified: true })
 
+    // A gate pass for admin with any other email is refused.
     await expect(
       signupGate.run({ email: 'second@example.com', role: 'admin' }, () => signUp('second@example.com')),
     ).rejects.toThrow()
     expect(await db.select().from(users)).toHaveLength(1)
+  })
+
+  it('refuses every admin when OWNER_EMAIL is not set', async () => {
+    vi.stubEnv('OWNER_EMAIL', '')
+    expect(isOwnerEmail('owner@example.com')).toBe(false)
+    await expect(
+      signupGate.run({ email: 'owner@example.com', role: 'admin' }, () => signUp('owner@example.com')),
+    ).rejects.toThrow()
+    expect(await db.select().from(users)).toHaveLength(0)
+  })
+
+  it('creates the owner from the environment, moves old data in, and signs in with that password', async () => {
+    await db.insert(resumes).values({ name: 'Old master', isMaster: true, content: {} })
+    vi.stubEnv('OWNER_EMAIL', 'owner@example.com')
+    vi.stubEnv('OWNER_NAME', 'The Owner')
+    vi.stubEnv('OWNER_PASSWORD_HASH', await hashPassword('owner password 1'))
+    const ctx = await auth.$context
+
+    expect(await ensureOwner(db, ctx)).toBe('created')
+    const [owner] = await db.select().from(users)
+    expect(owner).toMatchObject({ email: 'owner@example.com', name: 'The Owner', role: 'admin' })
+    const [old] = await db.select().from(resumes).where(eq(resumes.name, 'Old master'))
+    expect(old.userId).toBe(owner.id)
+
+    expect((await post('/sign-in/email', { email: 'owner@example.com', password: 'owner password 1' })).status).toBe(
+      200,
+    )
+    expect(await ensureOwner(db, ctx)).toBe('unchanged')
+    expect(await db.select().from(sessions)).toHaveLength(1)
+
+    // A new hash in the environment replaces the password and signs the owner out everywhere.
+    vi.stubEnv('OWNER_PASSWORD_HASH', await hashPassword('new owner password'))
+    expect(await ensureOwner(db, ctx)).toBe('password-updated')
+    expect(await db.select().from(sessions)).toHaveLength(0)
+    expect(
+      (await post('/sign-in/email', { email: 'owner@example.com', password: 'owner password 1' }, '10.0.0.5')).status,
+    ).toBe(401)
+    expect(
+      (await post('/sign-in/email', { email: 'owner@example.com', password: 'new owner password' }, '10.0.0.5')).status,
+    ).toBe(200)
+  })
+
+  it('takes admin away from anyone who is not OWNER_EMAIL', async () => {
+    vi.stubEnv('OWNER_EMAIL', 'old@example.com')
+    await signupGate.run({ email: 'old@example.com', role: 'admin' }, () => signUp('old@example.com'))
+    vi.stubEnv('OWNER_EMAIL', 'new@example.com')
+    vi.stubEnv('OWNER_PASSWORD_HASH', await hashPassword('owner password 1'))
+    expect(await ensureOwner(db, await auth.$context)).toBe('created')
+    const roles = Object.fromEntries((await db.select().from(users)).map((u) => [u.email, u.role]))
+    expect(roles).toEqual({ 'old@example.com': 'user', 'new@example.com': 'admin' })
+  })
+
+  it('does nothing without OWNER_EMAIL and OWNER_PASSWORD_HASH, or with a bad hash', async () => {
+    vi.stubEnv('OWNER_EMAIL', '')
+    vi.stubEnv('OWNER_PASSWORD_HASH', '')
+    expect(await ensureOwner(db, await auth.$context)).toBe('not-configured')
+    vi.stubEnv('OWNER_EMAIL', 'owner@example.com')
+    vi.stubEnv('OWNER_PASSWORD_HASH', 'not-a-hash')
+    const err = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    expect(await ensureOwner(db, await auth.$context)).toBe('not-configured')
+    err.mockRestore()
+    expect(await db.select().from(users)).toHaveLength(0)
   })
 
   it('refuses password sign-ups without the gate, and the public endpoint is disabled', async () => {

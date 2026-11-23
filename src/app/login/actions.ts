@@ -1,14 +1,11 @@
 'use server'
 
-import { count, eq } from 'drizzle-orm'
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { getDb } from '@/db'
-import { settings, users } from '@/db/schema'
 import { getAuth, PASSWORD_MIN } from '@/lib/auth/auth'
 import { signupGate } from '@/lib/auth/gate'
-import { findInviteByToken, isEmail, normalizeEmail } from '@/lib/auth/invites'
-import { verifyPassword } from '@/lib/auth/password'
+import { findInviteByToken } from '@/lib/auth/invites'
 
 export type FormState = { error?: string }
 
@@ -28,7 +25,7 @@ function readAccount(form: FormData): { name: string; password: string; error?: 
   return { name, password }
 }
 
-async function createAccount(email: string, role: 'admin' | 'user', name: string, password: string) {
+async function createAccount(email: string, role: 'user', name: string, password: string) {
   const auth = await getAuth()
   const h = await headers()
   await signupGate.run({ email, role }, () => auth.api.signUpEmail({ body: { name, email, password }, headers: h }))
@@ -52,63 +49,6 @@ export async function signUpWithInvite(_prev: FormState, form: FormData): Promis
   if (error) return { error }
   try {
     await createAccount(invite.email, 'user', name, password)
-  } catch (e) {
-    return { error: signUpError(e) }
-  }
-  redirect('/')
-}
-
-/** True once someone has claimed the admin account. */
-export async function hasAdmin(): Promise<boolean> {
-  const db = await getDb()
-  const [{ n }] = await db.select({ n: count() }).from(users).where(eq(users.role, 'admin'))
-  return n > 0
-}
-
-/** Wrong setup passwords are counted in the database (so it holds across server instances): 5, then a 15-minute wait. */
-const SETUP_MAX_FAILURES = 5
-const SETUP_LOCK_MS = 15 * 60 * 1000
-type SetupLock = { failures: number; until: number }
-
-async function setupLock(): Promise<SetupLock> {
-  const db = await getDb()
-  const [row] = await db.select().from(settings).where(eq(settings.key, 'setup_lock'))
-  return (row?.value as SetupLock | undefined) ?? { failures: 0, until: 0 }
-}
-
-async function saveSetupLock(value: SetupLock): Promise<void> {
-  const db = await getDb()
-  await db
-    .insert(settings)
-    .values({ key: 'setup_lock', value })
-    .onConflictDoUpdate({ target: settings.key, set: { value, updatedAt: new Date() } })
-}
-
-/**
- * First-time setup: the owner creates the admin account. The current Jobber password (APP_PASSWORD_HASH,
- * set with `npm run set-password`) proves it's the owner. Works only while no admin exists.
- */
-export async function setupOwner(_prev: FormState, form: FormData): Promise<FormState> {
-  if (await hasAdmin()) return { error: 'Jobber is already set up. Sign in instead.' }
-  const lock = await setupLock()
-  if (lock.until > Date.now()) return { error: 'Too many wrong tries. Wait 15 minutes and try again.' }
-  const ownerPassword = String(form.get('ownerPassword') ?? '')
-  const ok = ownerPassword.length > 0 && (await verifyPassword(ownerPassword, process.env.APP_PASSWORD_HASH))
-  if (!ok) {
-    const failures = lock.failures + 1
-    await saveSetupLock(
-      failures >= SETUP_MAX_FAILURES ? { failures: 0, until: Date.now() + SETUP_LOCK_MS } : { failures, until: 0 },
-    )
-    await new Promise((r) => setTimeout(r, 500 * failures))
-    return { error: 'That is not the current Jobber password.' }
-  }
-  await saveSetupLock({ failures: 0, until: 0 })
-  const email = normalizeEmail(String(form.get('email') ?? ''))
-  if (!isEmail(email)) return { error: 'Enter a valid email address.' }
-  const { name, password, error } = readAccount(form)
-  if (error) return { error }
-  try {
-    await createAccount(email, 'admin', name, password)
   } catch (e) {
     return { error: signUpError(e) }
   }

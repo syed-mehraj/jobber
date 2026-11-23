@@ -6,7 +6,7 @@ import { NextResponse, type NextRequest } from 'next/server'
  * This only checks that a session cookie is present, to redirect quickly. The real check (the session
  * in the database) happens in every data read and server action (src/lib/auth/session.ts).
  */
-const PUBLIC = ['/login', '/signup', '/setup', '/api/auth', '/api/cron']
+const PUBLIC = ['/login', '/signup', '/api/auth', '/api/cron']
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl

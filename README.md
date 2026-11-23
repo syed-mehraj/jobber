@@ -14,7 +14,7 @@ Status: design system, sign-in, database and the job search work. Next: the mast
 git config core.hooksPath .githooks   # blocks commits containing keys, tokens or phone numbers
 cp .env.example .env.local            # fill in locally; never commit real values
 npm install
-npm run set-password                  # choose your sign-in password (stored as a hash in .env.local)
+# set OWNER_EMAIL, OWNER_PASSWORD_HASH, SESSION_SECRET, CRON_SECRET in .env.local (see .env.example)
 npm run dev                           # http://localhost:3000
 ```
 

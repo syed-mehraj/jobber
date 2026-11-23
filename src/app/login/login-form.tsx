@@ -45,7 +45,8 @@ export function LoginForm({ google, error: initialError }: { google: boolean; er
           </div>
         </>
       )}
-      <form onSubmit={onSubmit} className="grid gap-4">
+      {/* method="post": if the form is sent before the page script loads, the password never ends up in the URL. */}
+      <form onSubmit={onSubmit} method="post" className="grid gap-4">
         <Input label="Email" name="email" type="email" autoComplete="email" autoFocus required />
         <PasswordInput label="Password" name="password" autoComplete="current-password" required error={error} />
         <Button type="submit" variant="primary" size="lg" loading={pending} className="w-full">

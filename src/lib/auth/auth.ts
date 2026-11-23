@@ -8,11 +8,13 @@ import { accounts, rateLimits, sessions, users, verifications, type Role } from 
 import { signupGate } from './gate'
 import { findInviteByEmail, normalizeEmail } from './invites'
 import { onAccountCreated } from './onboard'
+import { ensureOwner, isOwnerEmail } from './owner'
 
 /*
  * Sign-in (Better Auth): email + password, and "Continue with Google" when GOOGLE_CLIENT_ID and
  * GOOGLE_CLIENT_SECRET are set. Sessions live in the database. Invite-only:
- * - password accounts are created only by the /signup (invite link) and /setup (owner claim) server actions;
+ * - the owner (the only admin) comes from OWNER_EMAIL / OWNER_PASSWORD_HASH in the environment (owner.ts);
+ * - other password accounts are created only by the /signup (invite link) server action;
  * - Google creates an account only for an email with an open invite;
  * - everything else is refused by the user.create.before hook below.
  */
@@ -31,7 +33,7 @@ function options(db: DB) {
   return {
     appName: 'Jobber',
     baseURL: baseURL(),
-    // The session secret from `npm run set-password` signs Better Auth's cookies too.
+    // SESSION_SECRET (a long random value in .env.local / Vercel) signs Better Auth's cookies.
     secret: process.env.BETTER_AUTH_SECRET ?? process.env.SESSION_SECRET,
     database: drizzleAdapter(db, {
       provider: 'pg',
@@ -81,9 +83,10 @@ function options(db: DB) {
             const pass = signupGate.getStore()
             let role: Role
             if (pass) {
-              // Created by the invite or setup action, which already checked the link or the owner's password.
+              // Created by the invite action (which checked the link) or by ensureOwner (from the environment).
               if (pass.email !== email) return false
               if (pass.role === 'admin') {
+                if (!isOwnerEmail(email)) return false
                 const [admin] = await db.select({ id: users.id }).from(users).where(eq(users.role, 'admin')).limit(1)
                 if (admin) return false
               }
@@ -113,14 +116,24 @@ export function createAuth(db: DB) {
 
 export type Auth = ReturnType<typeof createAuth>
 
-const globalForAuth = globalThis as unknown as { __jobberAuth?: { db: DB; auth: Auth } }
+const globalForAuth = globalThis as unknown as { __jobberAuth?: { db: DB; ready: Promise<Auth> } }
 
-/** The Better Auth instance, built once per database connection. */
+/** The Better Auth instance, built once per database connection, with the owner account from the environment in place. */
 export async function getAuth(): Promise<Auth> {
   const db = await getDb()
   const cached = globalForAuth.__jobberAuth
-  if (cached && cached.db === db) return cached.auth
+  if (cached && cached.db === db) return cached.ready
   const auth = createAuth(db)
-  globalForAuth.__jobberAuth = { db, auth }
-  return auth
+  const ready = (async () => {
+    try {
+      const result = await ensureOwner(db, await auth.$context)
+      if (result !== 'unchanged') console.info(`[owner] ${result}`)
+    } catch (error) {
+      // Another server instance may have created the owner at the same moment; the next start checks again.
+      console.error('[owner] setup failed:', error instanceof Error ? error.message : error)
+    }
+    return auth
+  })()
+  globalForAuth.__jobberAuth = { db, ready }
+  return ready
 }

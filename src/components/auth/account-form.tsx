@@ -12,14 +12,12 @@ type Props = {
   /** Fixed email (from the invite); when absent the form asks for one. */
   email?: string
   hidden?: Record<string, string>
-  /** Show the owner-password field (setup). */
-  ownerPassword?: boolean
   google?: boolean
   submit: string
   passwordMin: number
 }
 
-export function AccountForm({ action, email, hidden, ownerPassword, google, submit, passwordMin }: Props) {
+export function AccountForm({ action, email, hidden, google, submit, passwordMin }: Props) {
   const [state, formAction, pending] = useActionState<FormState, FormData>(action, {})
   const [googleError, setGoogleError] = useState<string>()
   return (
@@ -55,15 +53,6 @@ export function AccountForm({ action, email, hidden, ownerPassword, google, subm
           hint={`At least ${passwordMin} characters.`}
         />
         <PasswordInput label="Password again" name="confirm" autoComplete="new-password" required />
-        {ownerPassword && (
-          <PasswordInput
-            label="Current Jobber password"
-            name="ownerPassword"
-            autoComplete="off"
-            required
-            hint="The one set with npm run set-password. It proves you're the owner."
-          />
-        )}
         {state.error && (
           <p role="alert" className="text-small text-danger">
             {state.error}
