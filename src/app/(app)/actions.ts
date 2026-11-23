@@ -3,9 +3,10 @@
 import { and, eq } from 'drizzle-orm'
 import { refresh } from 'next/cache'
 import { getDb } from '@/db'
-import { applications, jobs, type ApplicationStatus } from '@/db/schema'
+import { applications, jobMatches, jobs, sources, type ApplicationStatus } from '@/db/schema'
 import { requireUser } from '@/lib/auth/session'
 import { runSearch } from '@/jobs/run'
+import { isUnofficial } from '@/jobs/unofficial'
 
 const STATUSES: ApplicationStatus[] = ['saved', 'applied', 'oa', 'interview', 'offer', 'rejected']
 
@@ -14,8 +15,12 @@ export async function markApplied(jobId: number): Promise<void> {
   const user = await requireUser()
   if (!Number.isInteger(jobId)) return
   const db = await getDb()
-  const [job] = await db.select({ id: jobs.id }).from(jobs).where(eq(jobs.id, jobId))
-  if (!job) return
+  const [job] = await db
+    .select({ id: jobs.id, kind: sources.kind })
+    .from(jobs)
+    .innerJoin(sources, eq(sources.id, jobs.sourceId))
+    .where(eq(jobs.id, jobId))
+  if (!job || (user.role !== 'admin' && isUnofficial(job.kind))) return
   await db.insert(applications).values({ userId: user.id, jobId, status: 'applied' }).onConflictDoNothing()
   refresh()
 }
@@ -39,15 +44,18 @@ export async function removeApplication(id: number): Promise<void> {
   refresh()
 }
 
-/** Hide a role from the lists (it stays hidden when the search sees it again). `restore` undoes it. */
+/** Hide a role from this person's lists (it stays hidden when the search sees it again). `false` undoes it. */
 export async function setDismissed(jobId: number, dismissed: boolean): Promise<void> {
-  await requireUser()
+  const user = await requireUser()
   if (!Number.isInteger(jobId)) return
   const db = await getDb()
+  const [job] = await db.select({ id: jobs.id }).from(jobs).where(eq(jobs.id, jobId))
+  if (!job) return
+  const dismissedAt = dismissed ? new Date() : null
   await db
-    .update(jobs)
-    .set({ dismissedAt: dismissed ? new Date() : null })
-    .where(eq(jobs.id, jobId))
+    .insert(jobMatches)
+    .values({ userId: user.id, jobId, dismissedAt })
+    .onConflictDoUpdate({ target: [jobMatches.userId, jobMatches.jobId], set: { dismissedAt } })
   refresh()
 }
 

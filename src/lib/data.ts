@@ -2,9 +2,20 @@ import 'server-only'
 import { and, count, desc, eq, gte, inArray, isNotNull, isNull, ne, sql } from 'drizzle-orm'
 import { after, connection } from 'next/server'
 import { getDb } from '@/db'
-import { applications, jobs, resumes, sources, type ApplicationStatus, type Level, type Region } from '@/db/schema'
+import {
+  applications,
+  jobMatches,
+  jobs,
+  resumes,
+  sources,
+  type ApplicationStatus,
+  type Level,
+  type Region,
+} from '@/db/schema'
 import { requireAdmin, requireUser, type CurrentUser } from '@/lib/auth/session'
+import { needsScores, rescore } from '@/jobs/matches'
 import { isStale, lastRun, runSearch } from '@/jobs/run'
+import { UNOFFICIAL_KINDS } from '@/jobs/unofficial'
 
 /*
  * Every read the pages make. Each one checks the session first (the proxy is not the only guard),
@@ -28,9 +39,13 @@ async function ctx(): Promise<{ d: Awaited<ReturnType<typeof getDb>>; user: Curr
   return { d: await getDb(), user }
 }
 
-/** Starts a search after the response is sent, if the last one is stale. The next refresh shows the results. */
+/**
+ * Starts a search after the response is sent, if the last one is stale. The next refresh shows the results.
+ * A new account gets its scores straight away instead of waiting for the next search.
+ */
 export async function refreshIfStale(): Promise<void> {
-  const d = await db()
+  const { d, user } = await ctx()
+  if (await needsScores(d, user.id)) await rescore(d, { userIds: [user.id] })
   if (await isStale(d, REFRESH_MINUTES)) {
     after(async () => {
       await runSearch(d, 'refresh').catch((e) => console.error('[search] background run failed:', e))
@@ -45,8 +60,23 @@ function startOfTodayIst(now = new Date()): Date {
   return new Date(ist.getTime() - 5.5 * 3600000)
 }
 
-/** Still posted and not dismissed. */
-const open = and(isNull(jobs.closedAt), isNull(jobs.dismissedAt))!
+const unofficialKinds = [...UNOFFICIAL_KINDS]
+
+/**
+ * Jobs this person sees: still posted, not dismissed by them, and (for everyone but the admin) not from the
+ * unofficial big-tech readers, which the owner chose to read for personal use only.
+ */
+const open = (user: CurrentUser) =>
+  and(
+    isNull(jobs.closedAt),
+    sql`not exists (select 1 from ${jobMatches} where ${jobMatches.jobId} = ${jobs.id} and ${jobMatches.userId} = ${user.id} and ${jobMatches.dismissedAt} is not null)`,
+    user.role === 'admin' || unofficialKinds.length === 0
+      ? undefined
+      : sql`not exists (select 1 from ${sources} where ${sources.id} = ${jobs.sourceId} and ${sources.kind} in (${sql.join(
+          unofficialKinds.map((k) => sql`${k}`),
+          sql`, `,
+        )}))`,
+  )!
 /** The signed-in person hasn't applied to the job. */
 const notApplied = (userId: string) =>
   sql`not exists (select 1 from ${applications} where ${applications.jobId} = ${jobs.id} and ${applications.userId} = ${userId})`
@@ -70,11 +100,11 @@ export async function getCounts(): Promise<Counts> {
     d
       .select({ n: count() })
       .from(jobs)
-      .where(and(open, notApplied(user.id))),
+      .where(and(open(user), notApplied(user.id))),
     d
       .select({ n: count() })
       .from(jobs)
-      .where(and(open, notApplied(user.id), gte(jobs.firstSeenAt, startOfTodayIst()))),
+      .where(and(open(user), notApplied(user.id), gte(jobs.firstSeenAt, startOfTodayIst()))),
     d
       .select({ n: count() })
       .from(applications)
@@ -131,6 +161,10 @@ export type JobRow = {
   country: string | null
 }
 
+/** This person's score for the job (from job_matches). */
+const myScore = sql<number>`coalesce(${jobMatches.score}, 0)`
+const myMatch = (userId: string) => and(eq(jobMatches.jobId, jobs.id), eq(jobMatches.userId, userId))
+
 const jobColumns = (userId: string) => ({
   id: jobs.id,
   title: jobs.title,
@@ -140,13 +174,13 @@ const jobColumns = (userId: string) => ({
   level: jobs.level,
   category: jobs.category,
   url: jobs.url,
-  score: jobs.score,
+  score: sql<number>`coalesce(${jobMatches.score}, 0)`.mapWith(Number),
   postedAt: jobs.postedAt,
   firstSeenAt: jobs.firstSeenAt,
-  reasons: jobs.reasons,
+  reasons: sql<string[]>`coalesce(${jobMatches.reasons}, '{}'::text[])`,
   flags: jobs.flags,
-  matched: jobs.matched,
-  missing: jobs.missing,
+  matched: sql<string[]>`coalesce(${jobMatches.matched}, '{}'::text[])`,
+  missing: sql<string[]>`coalesce(${jobMatches.missing}, '{}'::text[])`,
   required: jobs.required,
   source: sources.name,
   sourceKind: sources.kind,
@@ -161,8 +195,9 @@ export async function getTopMatches(limit = 5): Promise<JobRow[]> {
     .select(jobColumns(user.id))
     .from(jobs)
     .innerJoin(sources, eq(sources.id, jobs.sourceId))
-    .where(and(open, notApplied(user.id)))
-    .orderBy(desc(jobs.score), desc(jobs.firstSeenAt))
+    .leftJoin(jobMatches, myMatch(user.id))
+    .where(and(open(user), notApplied(user.id)))
+    .orderBy(desc(myScore), desc(jobs.firstSeenAt))
     .limit(limit)
 }
 
@@ -178,7 +213,7 @@ export type JobFilter = {
 
 export async function getJobs(filter: JobFilter = {}, limit = 200): Promise<{ rows: JobRow[]; total: number }> {
   const { d, user } = await ctx()
-  const where = [open]
+  const where = [open(user)]
   if (filter.scope === 'abroad') where.push(eq(jobs.region, 'international'))
   else if (filter.scope === 'home') where.push(ne(jobs.region, 'international'))
   if (filter.level && filter.level !== 'all') where.push(eq(jobs.level, filter.level))
@@ -186,12 +221,13 @@ export async function getJobs(filter: JobFilter = {}, limit = 200): Promise<{ ro
   if (filter.country && filter.country !== 'all') where.push(eq(jobs.country, filter.country))
   if (filter.category && filter.category !== 'all') where.push(eq(jobs.category, filter.category))
   const order =
-    filter.sort === 'newest' ? [desc(jobs.firstSeenAt), desc(jobs.score)] : [desc(jobs.score), desc(jobs.firstSeenAt)]
+    filter.sort === 'newest' ? [desc(jobs.firstSeenAt), desc(myScore)] : [desc(myScore), desc(jobs.firstSeenAt)]
   const [rows, [{ n }]] = await Promise.all([
     d
       .select(jobColumns(user.id))
       .from(jobs)
       .innerJoin(sources, eq(sources.id, jobs.sourceId))
+      .leftJoin(jobMatches, myMatch(user.id))
       .where(and(...where))
       .orderBy(...order)
       .limit(limit),
@@ -209,11 +245,11 @@ export async function getScopeCounts(): Promise<{
   abroad: number
   byCountry: { country: string; n: number }[]
 }> {
-  const d = await db()
+  const { d, user } = await ctx()
   const rows = await d
     .select({ region: jobs.region, country: jobs.country, n: count() })
     .from(jobs)
-    .where(open)
+    .where(open(user))
     .groupBy(jobs.region, jobs.country)
   let home = 0
   let abroad = 0
@@ -333,10 +369,14 @@ export async function getJob(id: number): Promise<JobDetail | null> {
       ...jobColumns(user.id),
       summary: jobs.summary,
       closed: sql<boolean>`${jobs.closedAt} is not null`,
-      dismissed: sql<boolean>`${jobs.dismissedAt} is not null`,
+      dismissed: sql<boolean>`${jobMatches.dismissedAt} is not null`,
     })
     .from(jobs)
     .innerJoin(sources, eq(sources.id, jobs.sourceId))
+    .leftJoin(jobMatches, myMatch(user.id))
     .where(eq(jobs.id, id))
-  return row ?? null
+  if (!row) return null
+  // Unofficial big-tech jobs are the admin's only.
+  if (user.role !== 'admin' && UNOFFICIAL_KINDS.has(row.sourceKind)) return null
+  return row
 }

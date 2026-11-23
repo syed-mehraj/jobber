@@ -1,6 +1,17 @@
-import { and, count, eq, isNull } from 'drizzle-orm'
+import { and, count, eq, isNotNull, isNull, sql } from 'drizzle-orm'
 import type { DB } from '@/db'
-import { abouts, applications, profiles, resumeFiles, resumes, settings, users, type Role } from '@/db/schema'
+import {
+  abouts,
+  applications,
+  jobMatches,
+  jobs,
+  profiles,
+  resumeFiles,
+  resumes,
+  settings,
+  users,
+  type Role,
+} from '@/db/schema'
 import { defaultProfile, type Profile } from '@/jobs/score'
 import { defaultAbout } from '@/resume/about'
 import { blankResume } from '@/resume/edit-ops'
@@ -25,6 +36,26 @@ export async function claimForOwner(db: DB, userId: string): Promise<void> {
   for (const table of [resumes, abouts, applications, resumeFiles]) {
     await db.update(table).set({ userId }).where(isNull(table.userId))
   }
+
+  // Jobs dismissed before accounts stay dismissed for the owner.
+  await db
+    .insert(jobMatches)
+    .select(
+      db
+        .select({
+          userId: sql<string>`${userId}`.as('user_id'),
+          jobId: jobs.id,
+          score: jobs.score,
+          matched: jobs.matched,
+          missing: jobs.missing,
+          reasons: jobs.reasons,
+          dismissedAt: jobs.dismissedAt,
+          updatedAt: sql<Date>`now()`.as('updated_at'),
+        })
+        .from(jobs)
+        .where(isNotNull(jobs.dismissedAt)),
+    )
+    .onConflictDoNothing()
 
   const [old] = await db.select().from(settings).where(eq(settings.key, 'profile'))
   const legacy = (old?.value as Profile | undefined) ?? defaultProfile

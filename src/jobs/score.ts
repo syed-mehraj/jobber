@@ -64,36 +64,56 @@ const REGION_TEXT: Record<Region, string> = {
 const COVERAGE_MIN_SKILLS = 3
 const SKILL_POINTS = 30
 
-export function scoreJob(
-  p: RawPosting,
-  c: { level: Level; region: Region; category: string },
-  profile: Profile = defaultProfile,
-  now = new Date(),
-): { score: number; matched: string[]; missing: string[]; required: string[]; reasons: string[] } {
-  const text = `${p.title}\n${p.description ?? ''}`
-  // Skills the posting asks for, as canonical names, and how the profile's skills (canonicalised too) line up with them.
-  const required = extractSkills(text)
+/** What scoring needs from a job; both a fresh posting and a stored job row provide it. */
+export type ScoreInput = {
+  level: Level
+  region: Region
+  category: string
+  /** Canonical skills the posting asks for (extractSkills of title + full description). */
+  required: string[]
+  /** False when the posting had no description to check. */
+  hasDescription: boolean
+  postedAt: Date | null | undefined
+}
+
+export type Scored = { score: number; matched: string[]; missing: string[]; reasons: string[] }
+
+/** The score of one job for one profile. Used by the search and by per-person rescoring. */
+export function scoreFor(job: ScoreInput, profile: Profile, now = new Date()): Scored {
   const have = new Set(profile.skills.map(canonicalSkill))
-  const matched = required.filter((s) => have.has(s))
-  const missing = required.filter((s) => !have.has(s))
-  const reasons = [LEVEL_TEXT[c.level], REGION_TEXT[c.region]]
+  const matched = job.required.filter((s) => have.has(s))
+  const missing = job.required.filter((s) => !have.has(s))
+  const reasons = [LEVEL_TEXT[job.level], REGION_TEXT[job.region]]
 
-  let score = LEVEL_POINTS[c.level] + REGION_POINTS[c.region]
-  score += profile.preferred.includes(c.category) ? 14 : 8
+  let score = LEVEL_POINTS[job.level] + REGION_POINTS[job.region]
+  score += profile.preferred.includes(job.category) ? 14 : 8
 
-  if (!p.description)
+  if (!job.hasDescription)
     score += 10 // no description to check; give a neutral share
-  else if (required.length >= COVERAGE_MIN_SKILLS) score += (matched.length / required.length) * SKILL_POINTS
+  else if (job.required.length >= COVERAGE_MIN_SKILLS) score += (matched.length / job.required.length) * SKILL_POINTS
   else score += Math.min(SKILL_POINTS, matched.length * 6)
   if (matched.length) reasons.push(`Mentions ${matched.slice(0, 4).join(', ')}`)
 
-  if (p.postedAt) {
-    const days = (now.getTime() - p.postedAt.getTime()) / 86400000
+  if (job.postedAt) {
+    const days = (now.getTime() - job.postedAt.getTime()) / 86400000
     if (days <= 2) {
       score += 8
       reasons.push('Posted in the last 2 days')
     } else if (days <= 7) score += 5
     else if (days <= 14) score += 2
   }
-  return { score: Math.max(0, Math.min(99, Math.round(score))), matched, missing, required, reasons }
+  return { score: Math.max(0, Math.min(99, Math.round(score))), matched, missing, reasons }
+}
+
+export function scoreJob(
+  p: RawPosting,
+  c: { level: Level; region: Region; category: string },
+  profile: Profile = defaultProfile,
+  now = new Date(),
+): Scored & { required: string[] } {
+  const required = extractSkills(`${p.title}\n${p.description ?? ''}`)
+  return {
+    ...scoreFor({ ...c, required, hasDescription: Boolean(p.description), postedAt: p.postedAt }, profile, now),
+    required,
+  }
 }

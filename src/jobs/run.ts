@@ -1,11 +1,11 @@
 import { and, desc, eq, gt, inArray, isNull, lt, sql } from 'drizzle-orm'
 import type { DB } from '@/db'
-import { abouts, jobs, resumes, runs, settings, sources } from '@/db/schema'
+import { jobs, runs, sources } from '@/db/schema'
 import { adapters, UNOFFICIAL_KINDS } from './adapters'
 import { countryOf } from './countries'
 import { classify } from './filters'
-import { defaultProfile, scoreJob, type Profile } from './score'
-import { canonicalSkill, extractSkills } from './skills'
+import { rescore } from './matches'
+import { scoreJob, type Profile } from './score'
 import type { Adapter } from './types'
 
 export type RunSummary = {
@@ -23,43 +23,6 @@ const CONCURRENCY = 12
 const UNOFFICIAL_INTERVAL_MS = 60 * 60 * 1000
 /** A run that hasn't finished after this long is treated as dead, so a crash can't block searches forever. */
 const STALE_LOCK_MS = 10 * 60 * 1000
-
-/** Every string inside a resume's JSON content, joined: summary, bullets, skills, project stacks… */
-export function resumeText(content: unknown): string {
-  const out: string[] = []
-  const walk = (v: unknown) => {
-    if (typeof v === 'string') {
-      if (v !== 'TODO' && !v.startsWith('TODO')) out.push(v)
-    } else if (Array.isArray(v)) v.forEach(walk)
-    else if (v && typeof v === 'object') Object.values(v).forEach(walk)
-  }
-  walk(content)
-  return out.join('\n')
-}
-
-/**
- * The skills a posting is compared against: the stored profile list plus every known skill that appears
- * anywhere in the master resume or in "About you", so work described in prose counts as much as the Skills section.
- */
-export async function loadProfile(db: DB): Promise<Profile> {
-  const [row] = await db.select().from(settings).where(eq(settings.key, 'profile'))
-  const profile = (row?.value as Profile | undefined) ?? defaultProfile
-  const [master] = await db
-    .select({ content: resumes.content })
-    .from(resumes)
-    .where(eq(resumes.isMaster, true))
-    .limit(1)
-  const aboutText = (await db.select({ text: abouts.text }).from(abouts)).map((a) => a.text).join('\n\n')
-  if (!master && !aboutText) return profile
-  const skills = new Set(profile.skills.map(canonicalSkill))
-  // Skills named in "About you" count too, except ones it explicitly says you haven't used.
-  const notUsed = [...aboutText.matchAll(/haven.t (directly )?(used|administered|worked with)[^.]*/gi)]
-    .map((m) => m[0])
-    .join(' ')
-  const aboutSkills = extractSkills(aboutText).filter((s) => !extractSkills(notUsed).includes(s))
-  for (const s of [...extractSkills(resumeText(master?.content)), ...aboutSkills]) skills.add(s)
-  return { ...profile, skills: [...skills] }
-}
 
 /** Runs every enabled source once. Returns null if another run is already going. */
 export async function runSearch(
@@ -80,7 +43,8 @@ export async function runSearch(
   if (busy) return null
 
   const [run] = await db.insert(runs).values({ trigger, startedAt: started }).returning({ id: runs.id })
-  const profile = await loadProfile(db)
+  // Jobs are shared; this base score ignores skills. Each person's score is in job_matches (rescore below).
+  const profile: Profile = { skills: [], preferred: [] }
   // Unofficial sources (big-tech careers sites) are read at most once an hour, whatever triggered the run.
   const list = (await db.select().from(sources).where(eq(sources.enabled, true))).filter(
     (s) =>
@@ -223,6 +187,13 @@ export async function runSearch(
       for (let s = queue.shift(); s; s = queue.shift()) await runOne(s)
     }),
   )
+
+  // Score every open job for every person against their own resume and About you.
+  try {
+    await rescore(db, { now: now() })
+  } catch (error) {
+    errors.push({ source: 'Scoring', error: (error instanceof Error ? error.message : String(error)).slice(0, 300) })
+  }
 
   await db
     .update(runs)

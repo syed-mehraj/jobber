@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation'
 import { getDb } from '@/db'
 import { resumes } from '@/db/schema'
 import { requireUser } from '@/lib/auth/session'
+import { rescoreLater } from '@/lib/rescore-later'
 import { toDesign } from '@/resume/design'
 import { blankResume } from '@/resume/edit-ops'
 import { masterResume } from '@/resume/master'
@@ -86,8 +87,10 @@ export async function saveResume(
       updatedAt: now,
     })
     .where(and(eq(resumes.id, id), eq(resumes.userId, user.id)))
-    .returning({ id: resumes.id })
+    .returning({ id: resumes.id, isMaster: resumes.isMaster })
   if (!updated.length) return { ok: false, error: 'Not found.' }
+  // The master resume feeds this person's match scores.
+  if (updated[0].isMaster) rescoreLater(user.id)
   return { ok: true, savedAt: now.toISOString() }
 }
 

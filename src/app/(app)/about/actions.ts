@@ -5,6 +5,7 @@ import { refresh } from 'next/cache'
 import { getDb } from '@/db'
 import { abouts } from '@/db/schema'
 import { requireUser } from '@/lib/auth/session'
+import { rescoreLater } from '@/lib/rescore-later'
 import { ABOUT_MAX, ABOUT_TITLE_MAX } from '@/resume/about'
 
 export type AboutInput = { title: string; target: string; text: string }
@@ -32,6 +33,7 @@ export async function createAbout(input: AboutInput): Promise<AboutResult> {
     .insert(abouts)
     .values({ ...value, userId: user.id })
     .returning({ id: abouts.id })
+  rescoreLater(user.id)
   refresh()
   return { ok: true, id: row.id }
 }
@@ -48,6 +50,7 @@ export async function updateAbout(id: number, input: AboutInput): Promise<AboutR
     .where(and(eq(abouts.id, id), eq(abouts.userId, user.id)))
     .returning({ id: abouts.id })
   if (!updated.length) return { ok: false, error: 'Not found.' }
+  rescoreLater(user.id)
   refresh()
   return { ok: true, id }
 }
@@ -79,6 +82,7 @@ export async function deleteAbout(id: number): Promise<AboutResult> {
   if (!Number.isInteger(id)) return { ok: false, error: 'Not found.' }
   const db = await getDb()
   await db.delete(abouts).where(and(eq(abouts.id, id), eq(abouts.userId, user.id)))
+  rescoreLater(user.id)
   refresh()
   return { ok: true }
 }

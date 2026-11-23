@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm'
 import {
   bigint,
   boolean,
+  primaryKey,
   customType,
   index,
   integer,
@@ -306,3 +307,36 @@ export const profiles = pgTable('profiles', {
     .default(sql`'{}'::text[]`),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 })
+
+/**
+ * Each person's view of a job: the score against their own profile, the skills they match or lack, and
+ * whether they dismissed it. Rewritten for everyone after each search, and for one person when they edit
+ * their master resume or About you. `dismissed_at` survives rescoring.
+ */
+export const jobMatches = pgTable(
+  'job_matches',
+  {
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    jobId: integer('job_id')
+      .notNull()
+      .references(() => jobs.id, { onDelete: 'cascade' }),
+    score: integer('score').notNull().default(0),
+    matched: text('matched')
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    missing: text('missing')
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    reasons: text('reasons')
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    dismissedAt: timestamp('dismissed_at', { withTimezone: true }),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.jobId] }), index('job_matches_user_score').on(t.userId, t.score)],
+)
