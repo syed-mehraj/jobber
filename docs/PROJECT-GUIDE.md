@@ -24,7 +24,7 @@ A private, invite-only web app, built for one job seeker (Syed: B.E. AI & ML, MJ
 | AI | Google **Gemini API** (server-side only) |
 | File reading | **unpdf** (PDF text) and **mammoth** (Word .docx text) |
 | Tests | Vitest + Testing Library: 176 tests. Browser checks with Playwright + Chrome during development |
-| Hosting | Runs locally on `http://localhost:3000`; Vercel deploy with a daily cron is planned |
+| Hosting | Live at https://jobber-ten-silk.vercel.app (Vercel, region Mumbai/Singapore `sin1`, Neon Postgres, daily cron); locally on `http://localhost:3000` (or 3001) with PGlite |
 
 ### Principles we kept throughout
 - Show only roles worth applying to (filters before scores).
@@ -105,6 +105,31 @@ New resume ─► name + "for" ─► start from master / a version / blank ─�
 Editor: click a line / entry / section heading ─► edit on the page or in the close-up
         ─► pick font + style ─► AI assistant: prompt ─► accept / skip each suggestion
         ─► Save (⌘S) ─► Preview & PDF ─► Save as PDF
+```
+
+### Flow: sign in (owner and everyone else)
+```
+Owner:  OWNER_EMAIL + OWNER_PASSWORD_HASH in .env.local / Vercel
+        ─► app starts ─► owner account created (or password synced) ─► /login with that email + password ─► Dashboard (admin)
+Others: /login ─► email + password (eye button shows/hides it; spaces at either end are ignored)
+        or "Continue with Google" (only for an invited email, once Google keys are added)
+Wrong password ─► "That email or password is not right."   10 wrong tries in 5 min from one network ─► "Too many tries"
+```
+
+### Flow: invite someone (admin only)
+```
+☰ ─► People and invites ─► their email ─► Create invite link ─► copy the link (shown once) ─► send it to them
+They open /signup?invite=… ─► name + password (or Google with that email) ─► their own empty Jobber
+  · link works once, for 14 days · Revoke it any time · Remove a person = their account and all their data deleted
+They get: own resumes, About you, applications, match scores. Shared: the job list (official boards only).
+```
+
+### Flow: how a change goes live
+```
+Change the code on the Mac ─► npm test · lint · typecheck · build ─► check in the browser (localhost)
+  ─► commit as syed-mehraj ─► push to github.com/syed-mehraj/jobber (private)
+  ─► vercel deploy --prod (uploads this folder; Vercel isn't connected to GitHub, so a push alone changes nothing live)
+  ─► check https://jobber-ten-silk.vercel.app
 ```
 
 ---
@@ -366,6 +391,7 @@ Unofficial big-tech jobs (Amazon, Google, Microsoft, Netflix) are shown only to 
 | Secrets | Only in `.env.local` / Vercel settings; none prefixed `NEXT_PUBLIC_`; Gemini key server-only and never logged |
 | Pre-commit hook | `.githooks/pre-commit` blocks keys (Google, Telegram), DB URLs with passwords, private keys, `token/secret/password =` assignments and Indian phone numbers |
 | Personal data | No phone number or address in the repo; the parser drops phone numbers from uploads |
+| Password boxes | Eye button to show/hide; spaces at either end are ignored on sign-in and sign-up; the sign-in form posts, so a password typed before the page script loads never lands in the URL |
 | Repo | Private; visibility never changed |
 
 ---
