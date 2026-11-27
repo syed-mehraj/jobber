@@ -91,8 +91,10 @@ open app ──► search older than 10 min? ──yes──► search runs in t
 Jobs ─► tab (India & remote / Abroad) ─► filters ─► click a role
    │
    ▼
-Fit panel: why it matched · skills you have / lack · where Apply goes · description
+Fit panel: why it matched · skills you have / lack · Resume advice (AI) · where Apply goes · description
    │
+   ├─► "Get resume advice" ─► Gemini compares the role with your master resume + About you ─► fit, "lead with", gaps,
+   │      reworded lines (tick the ones you want) ─► "Create tailored resume" ─► new resume "<role> – <company>" in the editor
    ├─► "Apply on Greenhouse" ─► company page opens in a new tab ─► "Did you apply?" ─► Yes ─► Applications
    └─► "Not for me" ─► hidden (Restore brings it back)
 ```
@@ -319,6 +321,21 @@ A small box at the bottom right of the editor. Type what you want ("make the bul
 | Logging | One line per call: model, tokens in/out, duration (no prompt text, no key) |
 | Without a key | Shows "Add GEMINI_API_KEY to .env.local to use the assistant." |
 
+
+### 9.1 Resume advice for a job (Jobs page)
+
+Click a job → **Resume advice (AI) → Get resume advice**. One Gemini call (same key and limits as the editor assistant) reads the posting (title, skills it names, description up to 8000 characters) next to your **master resume** and **About you**, and returns:
+
+| Part | What it is |
+|---|---|
+| Fit | Strong fit / Good fit / A stretch, with one or two honest sentences |
+| Lead with | What already in your resume to put first for this role |
+| Gaps to be honest about | What the posting asks for that your resume doesn't show, and whether to add it if true or learn it |
+| Reworded lines | Up to 8 rewrites of existing lines so the real work reads closer to the posting; tick the ones you want |
+
+**Create tailored resume** copies your master, applies only the ticked lines and opens it in the editor, named "<role> – <company>" with the company as its target. Your master is never changed, and nothing is saved before that click. Code: `src/jobs/advice.ts` (prompt and checks), `src/app/(app)/jobs/advice-actions.ts` (`adviseForJob`, `createTailoredResume`), `src/components/jobs/job-advice.tsx`.
+
+Safety checks, enforced in code and not only asked of the model: the posting is treated as untrusted (instructions inside it are ignored); a rewrite is dropped if it targets an unknown path, a contact link or a "TODO" placeholder, or brings in a skill that appears nowhere in your resume or About you; markdown is stripped; the copy re-validates every ticked line on the server. Gemini's "thinking" is capped at 1024 tokens and the answer budget is 8192, so long postings don't cut the answer off (`generateJson` reports a cut-off clearly).
 ---
 
 ## 10. Uploading a resume
@@ -487,6 +504,6 @@ Parallel work: several pieces were built by Sonnet subagents in separate git wor
 2. **Fill the master resume's TODOs:** Steady role (title, dates, what you built), AI Excel Analyst, portfolio project, LinkedIn, certificate issuer; update your Parcera title to **AI Engineer** and confirm dates.
 3. **Check skills listed** that may not be yours (Kafka, WebRTC, Prisma, Expo, Kotlin).
 4. **Microsoft/Netflix feeds** may show "Failing" until their rate limit clears.
-5. **Not built yet:** Telegram morning digest, Gemini-based job scoring, kanban view for Applications, run-history page, job detail "Tailor a version" button, password reset by email (for now the admin can remove and re-invite someone; Google sign-in avoids passwords), a page for each person to edit their own skills profile.
+5. **Not built yet:** Telegram morning digest, Gemini-based job scoring, kanban view for Applications, run-history page, password reset by email (for now the admin can remove and re-invite someone; Google sign-in avoids passwords), a page for each person to edit their own skills profile.
 7. **Google sign-in:** create the OAuth client ([GOOGLE-SIGN-IN.md](GOOGLE-SIGN-IN.md)) and add the two keys.
 6. **Before applying abroad:** check Osmania University on anabin (Germany), the IND recognised-sponsor list (Netherlands), and the 12-month graduate window (Ireland).
