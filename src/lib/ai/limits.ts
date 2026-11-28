@@ -37,3 +37,19 @@ export async function aiRequestsLeft(db: DB, userId: string, role: Role, now = n
     .where(and(eq(aiUsage.userId, userId), eq(aiUsage.day, istDay(now))))
   return Math.max(0, AI_DAILY_LIMIT[role] - (row?.count ?? 0))
 }
+
+/*
+ * A burst limit per person on top of the daily one: at most `limit` requests in any `windowMs`.
+ * In memory, so it holds per server instance only (the daily limit is in the database). Kept on globalThis because
+ * Next bundles server actions separately and several action files share this one allowance.
+ */
+const g = globalThis as unknown as { __jobberAiBurst?: Map<string, number[]> }
+
+export function takeBurst(userId: string, limit = 20, windowMs = 10 * 60 * 1000, now = Date.now()): boolean {
+  const recent = (g.__jobberAiBurst ??= new Map())
+  const list = (recent.get(userId) ?? []).filter((t: number) => now - t <= windowMs)
+  if (list.length >= limit) return false
+  list.push(now)
+  recent.set(userId, list)
+  return true
+}

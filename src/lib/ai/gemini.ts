@@ -16,7 +16,7 @@ const DEFAULT_MODEL = 'gemini-2.5-flash'
 const TIMEOUT_MS = 45_000
 
 type GeminiResponse = {
-  candidates?: { content?: { parts?: { text?: string }[] } }[]
+  candidates?: { content?: { parts?: { text?: string }[] }; finishReason?: string }[]
   usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number }
   error?: { message?: string }
 }
@@ -25,7 +25,10 @@ export async function generateJson<T>(opts: {
   system: string
   prompt: string
   schema: object
+  /** The answer and the model's own "thinking" share this budget, so leave room for both. */
   maxOutputTokens?: number
+  /** Caps the thinking tokens (faster, and less likely to cut the answer off). */
+  thinkingBudget?: number
 }): Promise<{ data: T; usage: { input: number; output: number } }> {
   const key = process.env.GEMINI_API_KEY
   if (!key) throw new AiNotConfiguredError()
@@ -46,6 +49,7 @@ export async function generateJson<T>(opts: {
           responseSchema: opts.schema,
           temperature: 0.4,
           ...(opts.maxOutputTokens ? { maxOutputTokens: opts.maxOutputTokens } : {}),
+          ...(opts.thinkingBudget !== undefined ? { thinkingConfig: { thinkingBudget: opts.thinkingBudget } } : {}),
         },
       }),
       signal: AbortSignal.timeout(TIMEOUT_MS),
@@ -68,6 +72,8 @@ export async function generateJson<T>(opts: {
   const output = body?.usageMetadata?.candidatesTokenCount ?? 0
   console.info(`[ai] model=${model} in=${input} out=${output} ms=${ms}`)
 
+  if (body?.candidates?.[0]?.finishReason === 'MAX_TOKENS')
+    throw new Error('Gemini ran out of room before finishing its answer. Try again, or with a shorter request.')
   const text = body?.candidates?.[0]?.content?.parts?.[0]?.text
   if (typeof text !== 'string' || !text.trim()) throw new Error('Gemini returned no answer.')
   try {

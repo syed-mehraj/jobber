@@ -5,10 +5,10 @@ import { fieldsOf } from './paths'
 
 const m = masterResume
 const exp = m.experience.items[0]
-const other = m.experience.items[1]
+const other = m.projects.items[0]
 const b1 = `experience.${exp.id}.bullets.${exp.bullets[0].id}`
 const b2 = `experience.${exp.id}.bullets.${exp.bullets[1].id}`
-const otherBullet = `experience.${other.id}.bullets.${other.bullets[0].id}`
+const otherBullet = `projects.${other.id}.bullets.${other.bullets[0].id}`
 
 describe('buildAssistantPrompt', () => {
   it('lists editable fields as path: value lines, plus the request, About-you and job description', () => {

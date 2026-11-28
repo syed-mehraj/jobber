@@ -30,8 +30,8 @@ const design = (template: ResumeDesign['template'], extra: Partial<ResumeDesign>
 describe('templates', () => {
   const simple = paths(render(<ResumePage content={full} />).container)
 
-  it('has six templates and six fonts', () => {
-    expect(TEMPLATES.map((t) => t.id)).toEqual(['simple', 'compact', 'classic', 'modern', 'bold', 'minimal'])
+  it('has five ATS-safe templates and six fonts', () => {
+    expect(TEMPLATES.map((t) => t.id)).toEqual(['standard', 'harvard', 'jake', 'professional', 'plain'])
     expect(FONTS).toHaveLength(6)
     for (const f of FONTS) expect(f.cssVar).toMatch(/^--font-resume-/)
   })
@@ -45,7 +45,7 @@ describe('templates', () => {
       }
     }
     for (const f of FONTS) {
-      const { container } = render(<ResumePage content={full} design={design('simple', { font: f.id })} />)
+      const { container } = render(<ResumePage content={full} design={design('standard', { font: f.id })} />)
       expect(paths(container)).toEqual(simple)
     }
   })
@@ -81,19 +81,21 @@ describe('templates', () => {
 
   it('looks different in each template', () => {
     const htmls = TEMPLATES.map((t) => render(<ResumePage content={full} design={design(t.id)} />).container.innerHTML)
-    expect(new Set(htmls).size).toBe(6)
+    expect(new Set(htmls).size).toBe(5)
   })
 
-  it('uses the accent colour for modern headings and bold bands', () => {
-    const modern = render(<ResumePage content={full} design={design('modern')} />).container
-    expect(modern.querySelector('h2')?.getAttribute('style')).toContain('rgb(37, 99, 235)')
-    const bold = render(<ResumePage content={full} design={design('bold', { accent: 'black' })} />).container
-    expect(bold.querySelector('h2')?.getAttribute('style')).toContain('rgb(15, 23, 42)')
+  it('uses the accent colour for Professional headings only', () => {
+    const pro = render(<ResumePage content={full} design={design('professional')} />).container
+    expect(pro.querySelector('h2')?.getAttribute('style')).toContain('rgb(37, 99, 235)')
+    const black = render(<ResumePage content={full} design={design('professional', { accent: 'black' })} />).container
+    expect(black.querySelector('h2')?.getAttribute('style')).toContain('rgb(15, 23, 42)')
+    const std = render(<ResumePage content={full} design={design('standard')} />).container
+    expect(std.querySelector('h2')?.getAttribute('style') ?? '').not.toContain('rgb(')
   })
 
   it('sets the font family from the chosen font and keeps a fallback', () => {
     const page = (font: ResumeDesign['font']) =>
-      render(<ResumePage content={full} design={design('simple', { font })} />).container.querySelector(
+      render(<ResumePage content={full} design={design('standard', { font })} />).container.querySelector(
         '.resume-page',
       ) as HTMLElement
     expect(fontStack('lato')).toContain('var(--font-resume-lato,')
@@ -218,22 +220,31 @@ describe('ResumeBlock', () => {
 
 describe('toDesign', () => {
   it('passes a valid design through', () => {
-    const d: ResumeDesign = { template: 'bold', font: 'lato', accent: 'black' }
+    const d: ResumeDesign = { template: 'harvard', font: 'lato', accent: 'black' }
     expect(toDesign(d)).toEqual(d)
   })
 
   it('falls back to the defaults on bad input', () => {
     expect(toDesign(null)).toEqual(defaultDesign)
     expect(toDesign(undefined)).toEqual(defaultDesign)
-    expect(toDesign('bold')).toEqual(defaultDesign)
+    expect(toDesign('harvard')).toEqual(defaultDesign)
     expect(toDesign(42)).toEqual(defaultDesign)
     expect(toDesign({})).toEqual(defaultDesign)
     expect(toDesign({ template: 'fancy', font: 7, accent: 'red' })).toEqual(defaultDesign)
   })
 
+  it('maps the old template names to the closest new one', () => {
+    expect(toDesign({ template: 'simple' }).template).toBe('standard')
+    expect(toDesign({ template: 'compact' }).template).toBe('jake')
+    expect(toDesign({ template: 'classic' }).template).toBe('harvard')
+    expect(toDesign({ template: 'modern' }).template).toBe('professional')
+    expect(toDesign({ template: 'bold' }).template).toBe('standard')
+    expect(toDesign({ template: 'minimal' }).template).toBe('plain')
+  })
+
   it('falls back field by field', () => {
-    expect(toDesign({ template: 'minimal', font: 'comic-sans', accent: 'black' })).toEqual({
-      template: 'minimal',
+    expect(toDesign({ template: 'jake', font: 'comic-sans', accent: 'black' })).toEqual({
+      template: 'jake',
       font: 'inter',
       accent: 'black',
     })

@@ -2,6 +2,7 @@ import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { ApplyButton } from '@/components/dashboard/apply-button'
 import { DismissButton } from '@/components/jobs/dismiss-button'
+import { JobAdvice } from '@/components/jobs/job-advice'
 import { Badge } from '@/components/ui/badge'
 import { iconButtonClass } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -132,6 +133,10 @@ export function JobInspector({ job, closeHref }: { job: JobDetail; closeHref?: s
                 : 'This source gives no description, so skills could not be checked.'}
             </p>
           )}
+        </Section>
+
+        <Section title="Resume advice (AI)">
+          <JobAdvice key={job.id} jobId={job.id} label={`${job.title} – ${job.company}`} />
         </Section>
 
         <Section title="Where Apply goes">

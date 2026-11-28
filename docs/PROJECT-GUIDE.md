@@ -297,7 +297,7 @@ Laid out from your sketch: **the resume fills the left; every edit is on the rig
 
 **Selection levels:** line (one field: large textarea + bullet tools), entry (all of its fields + Remove this entry), section (show/hide, move up/down, list of entries, + Add entry). Breadcrumbs widen the selection.
 
-**Styles and fonts** (`src/resume/design.ts`, `render.tsx`, `themes.ts`, `fonts.ts`): 6 templates (Simple, Compact, Classic, Modern, Bold, Minimal), all single-column and ATS-safe; 6 fonts via `next/font` (Inter, Source Serif 4, Lato, Roboto, IBM Plex Sans, EB Garamond); blue or black accent. The Style panel shows live thumbnails of your own resume.
+**Styles and fonts** (`src/resume/design.ts`, `render.tsx`, `themes.ts`, `fonts.ts`): 5 templates (Standard, Harvard, Jake, Professional, Plain), all single-column, plain text, standard headings, no tables, icons or images, and contact details in the body, as the ATS guidance from Jobscan and Rezi advises (old saved choices map to the nearest new one); 6 fonts via `next/font` (Inter, Source Serif 4, Lato, Roboto, IBM Plex Sans, EB Garamond); blue or black accent (used only by Professional). The Style panel shows live thumbnails of your own resume.
 
 **Saving:** changes are a draft until **Save** (toolbar, close-up, or ⌘S). **Discard** returns to the last save (with a confirm). Leaving with unsaved changes asks first. Undo/redo groups typing in one field into one step.
 

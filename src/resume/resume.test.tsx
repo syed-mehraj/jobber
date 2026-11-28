@@ -34,13 +34,13 @@ describe('master resume', () => {
   })
 
   it('counts sections and bullets', () => {
-    expect(countSections(masterResume)).toBe(7) // the custom section is hidden and empty
+    expect(countSections(masterResume)).toBe(8)
     const bullets = countBullets(masterResume)
     expect(bullets).toBeGreaterThan(10)
     const hidden = clone(masterResume)
     hidden.experience.hidden = true
     expect(countBullets(hidden)).toBe(bullets - masterResume.experience.items.reduce((n, i) => n + i.bullets.length, 0))
-    expect(countSections(hidden)).toBe(6)
+    expect(countSections(hidden)).toBe(7)
   })
 })
 
@@ -51,14 +51,14 @@ describe('allSkills', () => {
     const skills = allSkills(c)
     expect(skills).toContain('python')
     expect(skills).toContain('nestjs')
-    expect(skills).toContain('retrieval-augmented generation')
+    expect(skills).toContain('rag')
     expect(skills.filter((s) => s === 'python')).toHaveLength(1)
     expect(skills.every((s) => s === s.toLowerCase().trim())).toBe(true)
     expect(skills).not.toContain('todo')
   })
 })
 
-describe('Simple template', () => {
+describe('Standard template', () => {
   it('puts a data-path on the text it renders', () => {
     const { container } = render(<ResumePage content={masterResume} />)
     const paths = [...container.querySelectorAll('[data-path]')].map((e) => e.getAttribute('data-path'))
@@ -85,14 +85,16 @@ describe('Simple template', () => {
     c.projects.hidden = true
     const { container } = render(<ResumePage content={c} />)
     const headings = [...container.querySelectorAll('h2')].map((h) => h.textContent)
-    expect(headings).toEqual(['Skills', 'Experience', 'Summary', 'Education', 'Certifications'])
+    expect(headings).toEqual(['Skills', 'Experience', 'Summary', 'Education', 'Certifications', 'Interests'])
   })
 
   it('uses real text and links, and no tables', () => {
-    const { container } = render(<ResumePage content={masterResume} />)
+    const withLinkedin = clone(masterResume)
+    withLinkedin.contact.linkedin = 'TODO'
+    const { container } = render(<ResumePage content={withLinkedin} />)
     expect(container.querySelector('table')).toBeNull()
     expect(container.querySelector('a[href="mailto:smrmehraj123@gmail.com"]')).not.toBeNull()
-    expect(container.querySelector('a[href="https://github.com/smrmehraj"]')).not.toBeNull()
+    expect(container.querySelector('a[href="https://github.com/syed-mehraj"]')).not.toBeNull()
     // an unfilled link stays plain text
     expect(container.querySelector('[data-path="contact.linkedin"]')?.tagName).toBe('SPAN')
   })

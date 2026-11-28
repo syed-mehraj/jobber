@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { users } from '@/db/schema'
 import { createTestDb } from '@/db/testing'
-import { AI_DAILY_LIMIT, aiRequestsLeft, istDay, takeAiRequest } from './limits'
+import { AI_DAILY_LIMIT, aiRequestsLeft, istDay, takeAiRequest, takeBurst } from './limits'
 
 describe('AI daily limit', () => {
   it('allows the daily number per person, then refuses until midnight in India', async () => {
@@ -23,5 +23,15 @@ describe('AI daily limit', () => {
     expect(istDay(day2)).toBe('2026-11-24')
     expect(await takeAiRequest(db, 'a', 'user', day2)).toBe(true)
     expect(await aiRequestsLeft(db, 'a', 'admin', day2)).toBe(AI_DAILY_LIMIT.admin - 1)
+  })
+})
+
+describe('AI burst limit', () => {
+  it('allows the limit within the window, then refuses, per person, and recovers as the window passes', () => {
+    const t0 = 1_000_000
+    for (let i = 0; i < 3; i++) expect(takeBurst('burst-a', 3, 60_000, t0 + i)).toBe(true)
+    expect(takeBurst('burst-a', 3, 60_000, t0 + 10)).toBe(false)
+    expect(takeBurst('burst-b', 3, 60_000, t0 + 10)).toBe(true)
+    expect(takeBurst('burst-a', 3, 60_000, t0 + 61_000)).toBe(true)
   })
 })

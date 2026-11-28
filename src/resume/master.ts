@@ -1,9 +1,8 @@
 import type { Bullet, ResumeContent, SkillGroup } from './types'
 
 /*
- * The master resume, built only from public facts: the portfolio site and the Parallel Labs work
- * document. Anything those do not state (dates, titles, numbers, links) is the text "TODO" for the
- * owner to fill in. Never add a phone number or a street address here.
+ * The master resume, taken from the owner's own current resume (PDF) plus the Jobber and AI Excel Analyst
+ * projects. Never add a phone number or a street address here.
  */
 
 /** Bullets with stable ids: bl('pl', [...]) gives b-pl-1, b-pl-2, … */
@@ -28,20 +27,20 @@ export const masterResume: ResumeContent = {
   contact: {
     hidden: false,
     name: 'Syed Mehraj Ur Rahman',
-    title: 'AI and machine learning student',
+    title: '',
     location: 'Hyderabad, India',
     email: 'smrmehraj123@gmail.com',
-    github: 'github.com/smrmehraj',
-    linkedin: 'TODO',
+    github: 'github.com/syed-mehraj',
+    linkedin: '',
     website: '',
   },
 
   summary: {
     hidden: false,
     text:
-      'AI and machine learning student at MJCET, Hyderabad (CGPA 9.0, graduating 2027). I build and tune an AI voice agent ' +
-      'at Parallel Labs that takes restaurant orders over the phone in real time. I have trained CNNs, LSTMs and ensemble ' +
-      'models on real datasets, and I now work on generative AI: retrieval-augmented generation and developer tooling.',
+      'AI/ML and backend engineering student (3rd-year B.E., 9.0 CGPA) with experience on a production voice-AI ordering ' +
+      'platform, plus hands-on work in CNN, RNN and ensemble models, LLM fine-tuning, RAG, and developer tooling such as ' +
+      'regit, a custom GitHub management CLI.',
   },
 
   experience: {
@@ -49,30 +48,18 @@ export const masterResume: ResumeContent = {
     items: [
       {
         id: 'exp-parallel-labs',
-        company: 'Parallel Labs (Parcera)',
-        role: 'Software Developer Intern',
+        company: 'i110Labs (formerly NextGen Candid Solutions Pvt. Ltd.)',
+        role: 'Software Developer – Intern',
         location: 'Hyderabad, India',
-        start: 'Jul 2026',
+        start: 'July 2026',
         end: 'Present',
         bullets: bl('pl', [
-          'Build and tune an AI voice agent that answers restaurant phone calls on a multi-restaurant ordering platform: callers order food or book tables by speaking, and the order goes to the restaurant’s point of sale.',
-          'Moved order and reservation wording into the conversation engine so the model speaks exact lines instead of improvising on a live order, which shortened calls; measured every change against real call transcripts.',
-          'Built a stuck-call watchdog that clears a stalled reply queue and hands the caller to a person, and engine-side consent checks so a vague “yeah” can no longer book a table.',
-          'Added per-turn LLM cost accounting after the prompt-cache discount, and operator controls to switch voice, speaking speed and noise suppression without a deploy.',
-          'Fine-tuned a 3-billion-parameter multilingual model on about 18,800 examples in five languages for a translation layer; on held-out rows, translation quality (chrF) rose from 62.5 to 82.1 and placeholder tags were preserved 100% of the time, up from 88%.',
-          'Shipped every change as a reviewed pull request with tests, including hostile-input tests on every field a caller or merchant can type into.',
-        ]),
-      },
-      {
-        id: 'exp-steady',
-        company: 'Steady',
-        role: 'TODO',
-        location: 'TODO',
-        start: 'TODO',
-        end: 'TODO',
-        bullets: bl('st', [
-          'Built NestJS microservices. TODO: say what each service did and the result.',
-          'Built the Expo and Kotlin mobile app. TODO: say what it does and the result.',
+          'Full-time, 3-month internship, reporting to the Director of IT.',
+          'Worked on a production AI voice agent that takes restaurant phone orders and table reservations on a multi-restaurant ordering platform (TypeScript, NestJS, PostgreSQL); every change shipped as a code-reviewed pull request with tests.',
+          'Improved ordering conversations: shorter, more natural calls, and better understanding of what callers actually ask for, including quantities, sizes, choices and corrections.',
+          'Worked on reservation calls, call reliability and recovery when a call stalls, and the speech-recognition and voice side of the agent.',
+          'Built cost tracking and operator dashboard controls for the voice agent, and a full-stack storefront feature across backend services and front ends.',
+          'Analysed real call logs to find and fix issues, and tested every change against multiple restaurants’ menus.',
         ]),
       },
     ],
@@ -82,87 +69,72 @@ export const masterResume: ResumeContent = {
     hidden: false,
     items: [
       {
+        id: 'prj-jobber',
+        name: 'Jobber – Job Search and Resume Builder',
+        stack: 'Next.js, React, TypeScript, Tailwind CSS, PostgreSQL, Gemini API',
+        dates: '2026',
+        bullets: bl('jb', [
+          'Built a full-stack web app that reads about 270 official job sources, scores each posting against your resume and shows the skills matched and missing; deployed on Vercel with Neon PostgreSQL and invite-only sign-in.',
+          'Built a resume editor with a master resume, tailored copies per job, six ATS-safe templates, PDF/Word import and PDF export.',
+          'Added a Gemini assistant that rewrites existing resume lines and gives per-job advice (fit, what to lead with, gaps), then creates a tailored resume from the edits you tick; code checks reject invented skills and ignore instructions hidden in job text.',
+          'Covered by 200+ automated tests (Vitest) and per-user daily limits on AI use.',
+        ]),
+      },
+      {
         id: 'prj-ai-excel-analyst',
-        name: 'AI Excel Analyst',
-        stack: 'TODO',
-        dates: 'TODO',
-        bullets: bl('ea', ['TODO: describe what it does, how it works and one measurable result.']),
+        name: 'AI Excel Analyst – Chrome Extension',
+        stack: 'TypeScript, DuckDB-Wasm, Chrome Extension (MV3), Vite',
+        dates: '2026 – Present',
+        bullets: bl('ea', [
+          'Building a Chrome extension that lets an AI answer questions about very large Excel/CSV files without uploading them: the file is read and queried locally with DuckDB-Wasm in a Web Worker, and the AI only sees a small data profile and writes the SQL.',
+          'Own the data engine: file readers with content-based format detection (csv, xlsx, xlsm, xlsb, xls, zip64, password-protected files), plus cleaning and profiling.',
+          'Measured the limits in a spike: xlsx read up to 404 MB, and CSV streamed through DuckDB up to 6.45 GB.',
+        ]),
       },
       {
-        id: 'prj-portfolio',
-        name: 'Personal portfolio',
-        stack: 'React, TypeScript, Vite',
-        dates: 'TODO',
-        bullets: bl('pf', ['TODO: describe what the site shows and one thing about how it is built.']),
-      },
-      {
-        id: 'prj-rag-assistant',
-        name: 'PDF RAG Assistant',
-        stack: 'Python, Gemini API',
+        id: 'prj-translation',
+        name: 'Multilingual Translation for Voice Ordering',
+        stack: 'Python, PyTorch, LoRA',
         dates: '',
-        bullets: bl('rag', [
-          'Splits PDFs into chunks, indexes them, and answers questions with the Gemini API using the passages it retrieves.',
+        bullets: bl('tr', [
+          'Built a multilingual training dataset and fine-tuned a 3B-parameter translation model so callers can order in other languages; evaluated on held-out data with clear accuracy gains over the base model.',
         ]),
       },
       {
         id: 'prj-regit',
-        name: 'regit',
+        name: 'regit – GitHub Management CLI Tool',
         stack: 'Python, GitHub REST API',
         dates: '',
         bullets: bl('rg', [
-          'Open-source Python command-line tool that manages GitHub repositories through the GitHub REST API.',
+          'Built and open-sourced a Python CLI tool that automates GitHub repository management via the GitHub REST API.',
         ]),
       },
       {
-        id: 'prj-cnn',
-        name: 'CNN Image Classifier',
-        stack: 'TensorFlow, Keras',
+        id: 'prj-rag-assistant',
+        name: 'PDF RAG Assistant',
+        stack: 'Gemini API, RAG',
+        dates: '',
+        bullets: bl('rag', [
+          'Built a Retrieval-Augmented Generation pipeline that indexes PDF content and generates context-aware outputs using the Gemini API.',
+        ]),
+      },
+      {
+        id: 'prj-cnn-rnn',
+        name: 'CNN Image Classification · RNN Sequence Modeling',
+        stack: 'TensorFlow, Keras, LSTM',
         dates: '',
         bullets: bl('cnn', [
-          'Image classifier trained with data augmentation and dropout so it holds up on images it has not seen.',
+          'Designed a CNN image classifier with data augmentation and regularization; trained LSTM-based RNNs for time-series forecasting with optimized preprocessing and evaluation pipelines.',
         ]),
       },
       {
-        id: 'prj-lstm',
-        name: 'LSTM Sequence Modeling',
-        stack: 'TensorFlow, Keras',
-        dates: '',
-        bullets: bl('lstm', [
-          'LSTM networks that forecast time series, with their own preprocessing and evaluation steps.',
-        ]),
-      },
-      {
-        id: 'prj-ensembles',
-        name: 'Ensemble Learning',
-        stack: 'Scikit-learn',
-        dates: '',
-        bullets: bl('ens', ['Bagging, Boosting and Stacking models, tuned and compared against single base learners.']),
-      },
-      {
-        id: 'prj-heart',
-        name: 'Heart Disease Prediction',
+        id: 'prj-ml-models',
+        name: 'Ensemble Learning · Heart Disease Prediction · Cattle Farm Analytics',
         stack: 'Python, Scikit-learn, TensorFlow',
         dates: '',
-        bullets: bl('hd', [
-          'Machine learning and deep learning classifiers on the Heart Disease UCI dataset, compared by AUC-ROC.',
-        ]),
-      },
-      {
-        id: 'prj-cattle',
-        name: 'Cattle Farm Analytics',
-        stack: 'Python, Scikit-learn',
-        dates: '',
-        bullets: bl('ct', [
-          'Regression and classification models that predict milk yield and livestock health from farm records.',
-        ]),
-      },
-      {
-        id: 'prj-su-hub',
-        name: 'SU Knowledge Hub',
-        stack: 'Pandas, Data analysis',
-        dates: '',
-        bullets: bl('su', [
-          'Core contributor to team projects in AI and data science: data wrangling, exploratory analysis, and charts the team used to decide what to do next.',
+        bullets: bl('ml', [
+          'Tuned Bagging, Boosting and Stacking ensembles that beat their base learners; benchmarked ML/DL classifiers on the Heart Disease UCI dataset (strong AUC-ROC); built regression/classification models for livestock health and milk yield.',
+          'SU Knowledge Hub: core contributor on collaborative AI/data science projects (data wrangling, EDA, visualization).',
         ]),
       },
     ],
@@ -173,12 +145,12 @@ export const masterResume: ResumeContent = {
     items: [
       {
         id: 'edu-mjcet',
-        school: 'Muffakham Jah College of Engineering and Technology (MJCET)',
+        school: 'Muffakham Jah College of Engineering & Technology',
         degree: 'B.E. in Artificial Intelligence and Machine Learning, Osmania University',
-        location: 'Hyderabad, India',
+        location: '',
         start: '2023',
-        end: '2027',
-        score: 'CGPA 9.0 / 10 (seventh semester)',
+        end: '2027 (Expected)',
+        score: 'CGPA: 9.0/10 | 6th Semester',
         bullets: [],
       },
     ],
@@ -187,43 +159,50 @@ export const masterResume: ResumeContent = {
   skills: {
     hidden: false,
     groups: [
-      group('lang', 'Languages', ['Python', 'TypeScript', 'C', 'Java']),
-      group('ml', 'Machine learning', [
-        'CNNs',
-        'LSTMs',
-        'Ensemble learning',
-        'TensorFlow',
-        'Keras',
-        'PyTorch',
-        'Scikit-learn',
-        'LoRA fine-tuning',
-      ]),
-      group('genai', 'Generative AI', [
-        'Retrieval-augmented generation',
-        'LLM APIs',
-        'Gemini API',
-        'Voice agents',
-        'Tool calling',
-      ]),
-      group('backend', 'Backend and mobile', [
-        'Node.js',
+      group('lang', 'Languages', ['Python', 'TypeScript', 'JavaScript (Node.js)', 'SQL', 'C', 'Java (Basic)']),
+      group('backend', 'Backend & Data', [
         'NestJS',
+        'REST APIs',
         'PostgreSQL',
         'Prisma',
+        'Redis',
         'Kafka',
-        'WebRTC',
-        'Expo',
-        'Kotlin',
+        'Docker',
+        'CI pipelines',
+        'Git/GitHub',
       ]),
-      group('data', 'Data', ['NumPy', 'Pandas', 'Data analysis']),
-      group('tools', 'Tools', ['Git', 'GitHub', 'GitHub REST API', 'Docker', 'Elasticsearch', 'CI pipelines']),
+      group('voice', 'Real-time Voice & LLMs', [
+        'Real-time voice (WebRTC/SIP)',
+        'Speech-to-text and text-to-speech',
+        'LLM APIs',
+        'Tool calling',
+        'RAG',
+      ]),
+      group('ml', 'ML / DL', [
+        'PyTorch',
+        'LoRA fine-tuning',
+        'TensorFlow',
+        'Keras',
+        'Scikit-learn',
+        'CNN',
+        'RNN',
+        'Ensemble Learning',
+        'NumPy',
+        'Pandas',
+      ]),
     ],
   },
 
   certifications: {
     hidden: false,
-    items: [{ id: 'cert-data-analysis-python', name: 'Data Analysis using Python', issuer: 'TODO', date: 'TODO' }],
+    items: [{ id: 'cert-data-analysis-python', name: 'Data Analysis using Python', issuer: '', date: '' }],
   },
 
-  custom: { hidden: true, title: 'Additional', bullets: [] },
+  custom: {
+    hidden: false,
+    title: 'Interests',
+    bullets: bl('int', [
+      'AI/ML, Generative AI & LLMs, Voice AI, Deep Learning, Developer Tooling, Fitness & Outdoor Sports, Cooking',
+    ]),
+  },
 }

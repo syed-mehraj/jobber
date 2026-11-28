@@ -29,6 +29,24 @@ afterEach(() => {
 })
 
 describe('generateJson', () => {
+  it('sends a thinking cap when asked, and says so clearly when the answer is cut off', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        new Response(
+          JSON.stringify({ candidates: [{ finishReason: 'MAX_TOKENS', content: { parts: [{ text: '{"a":' }] } }] }),
+          { status: 200 },
+        ),
+      )
+    vi.stubGlobal('fetch', fetchMock)
+    await expect(generateJson({ ...opts, maxOutputTokens: 100, thinkingBudget: 256 })).rejects.toThrow(
+      /ran out of room/,
+    )
+    const sent = JSON.parse(fetchMock.mock.calls[0][1].body)
+    expect(sent.generationConfig.thinkingConfig).toEqual({ thinkingBudget: 256 })
+    expect(sent.generationConfig.maxOutputTokens).toBe(100)
+  })
+
   it('sends the key header, schema and system instruction, and parses the answer and usage', async () => {
     const fetchMock = vi.fn().mockResolvedValue(ok('{"a":1}'))
     vi.stubGlobal('fetch', fetchMock)

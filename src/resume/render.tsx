@@ -1,10 +1,10 @@
 import type { ReactNode } from 'react'
 import { ACCENT_COLORS, defaultDesign, fontStack, type ResumeDesign } from './design'
-import { THEMES, headerStyle, headingStyle, titleStyle, type Theme } from './themes'
+import { THEMES, headingStyle, type Theme } from './themes'
 import type { Bullet, ResumeContent, SectionKey } from './types'
 
 /*
- * The resume templates (Simple, Compact, Classic, Modern, Bold, Minimal): one column, real text, standard
+ * The resume templates (Standard, Harvard, Jake, Professional, Plain): one column, real text, standard
  * section names, no tables for layout. They share this structure and differ only in the classes and colours
  * of themes.ts. It is a server-safe component (no hooks, no browser APIs) so it can render on the server,
  * in tests and inside the editor's preview.
@@ -133,12 +133,12 @@ function ContactBlock({ r, c }: { r: R; c: ResumeContent['contact'] }) {
   ]
   const shown = fields.filter((f) => c[f.key])
   return (
-    <header data-block="contact" className={r.t.header} style={headerStyle(r.design.template, r.accent)}>
+    <header data-block="contact" className={r.t.header}>
       <h1 data-path="contact.name" className={r.t.name} {...edit(r)}>
         {c.name}
       </h1>
       {c.title ? (
-        <p data-path="contact.title" className={r.t.title} style={titleStyle(r.design.template, r.accent)} {...edit(r)}>
+        <p data-path="contact.title" className={r.t.title} {...edit(r)}>
           {c.title}
         </p>
       ) : null}
